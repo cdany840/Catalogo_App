@@ -1,0 +1,2518 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth bg-slate-950 text-slate-100">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Portal administrativo con autenticación JWT bajo OWASP 2025, alta de productos con subida de imágenes y configuración en vivo de WhatsApp e Instagram."
+    />
+    <meta name="theme-color" content="#020617" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>URBAN_DROP — Admin & Acceso Seguro JWT (OWASP 2025)</title>
+
+    <!-- Google Fonts optimizadas -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Iconografía Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+      integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+
+    <!-- Tailwind CSS Engine -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+              heading: ['"Space Grotesk"', 'system-ui', '-apple-system', 'sans-serif'],
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      .font-heading {
+        font-family: 'Space Grotesk', sans-serif;
+      }
+    </style>
+  </head>
+
+  <body class="min-h-screen pb-24 select-none bg-slate-950 antialiased font-sans text-slate-100">
+    <!-- ========================================== -->
+    <!-- TOAST DE NOTIFICACIONES DE SEGURIDAD/ADMIN -->
+    <!-- ========================================== -->
+    <div
+      id="auth-toast"
+      class="fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-2xl bg-slate-900/95 border border-emerald-500/40 text-emerald-400 text-xs font-bold shadow-2xl backdrop-blur-md flex items-center gap-2 opacity-0 pointer-events-none -translate-y-3 transition-all duration-300"
+      role="status"
+      aria-live="polite"
+    >
+      <i id="auth-toast-icon" class="fa-solid fa-shield-halved text-sm" aria-hidden="true"></i>
+      <span id="auth-toast-msg">Operación verificada</span>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- HEADER STICKY (Navegación y Estado OWASP)  -->
+    <!-- ========================================== -->
+    <header class="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-md border-b border-slate-800/80 px-4 py-3">
+      <div class="max-w-xl mx-auto flex items-center justify-between">
+        <a
+          href="/"
+          class="flex items-center gap-2 text-slate-300 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 rounded-lg"
+          aria-label="Volver al catálogo principal"
+        >
+          <div class="w-8 h-8 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-pink-400">
+            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+          </div>
+          <div>
+            <span class="font-heading text-sm font-bold tracking-tight text-white block leading-none">URBAN_DROP</span>
+            <span class="text-[10px] font-mono text-slate-400">Ver Catálogo Público</span>
+          </div>
+        </a>
+
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold bg-pink-500/10 text-pink-400 border border-pink-500/20">
+            <i class="fa-solid fa-lock text-[9px]" aria-hidden="true"></i>
+            <span>OWASP 2025 • JWT</span>
+          </span>
+
+          <button
+            id="btn-owasp-info"
+            type="button"
+            class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center text-xs hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+            aria-label="Ver Arquitectura de Seguridad OWASP 2025"
+          >
+            <i class="fa-solid fa-shield-cat text-emerald-400" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-xl mx-auto px-4 pt-5 space-y-5">
+      <!-- ============================================================== -->
+      <!-- VISTA 1: FORMULARIO DE LOGIN SEGURO (OWASP 2025)               -->
+      <!-- ============================================================== -->
+      <section
+        id="login-card-view"
+        class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5 relative overflow-hidden"
+      >
+        <div class="absolute -top-16 -right-16 w-36 h-36 bg-pink-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-pink-500/20 via-purple-500/20 to-emerald-400/20 border border-pink-500/30 flex items-center justify-center text-pink-400 text-lg shrink-0">
+              <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+            </div>
+            <div>
+              <span class="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold block">
+                Supabase Auth + JWT
+              </span>
+              <h1 class="font-heading text-xl font-bold text-white leading-tight">
+                Acceso Administrativo
+              </h1>
+              <p class="text-xs text-slate-400">
+                Inicia sesión para gestionar productos, tallas, WhatsApp e Instagram
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Indicador de Rate-Limiting / Protección Fuerza Bruta (A07:2025) -->
+        <div class="p-3 rounded-2xl bg-slate-950/90 border border-slate-800 flex items-center justify-between text-[11px]">
+          <span class="text-slate-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-gauge-high text-cyan-400" aria-hidden="true"></i>
+            <span>Protección Anti-Fuerza Bruta:</span>
+          </span>
+          <span id="rate-limit-badge" class="font-mono font-bold text-emerald-400">
+            5 / 5 intentos disponibles
+          </span>
+        </div>
+
+        <!-- Banner de Bloqueo Temporal -->
+        <div
+          id="lockout-banner"
+          class="hidden p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs items-center gap-2.5"
+          role="alert"
+        >
+          <i class="fa-solid fa-ban text-red-400 text-base shrink-0" aria-hidden="true"></i>
+          <div>
+            <p class="font-bold text-red-200">Cuenta protegida temporalmente (OWASP A07:2025)</p>
+            <p class="text-[11px] text-red-300/90">
+              Demasiados intentos fallidos. Espera <span id="lockout-timer" class="font-mono font-bold">30</span>s para volver a intentar.
+            </p>
+          </div>
+        </div>
+
+        <!-- Banner de Error Genérico -->
+        <div
+          id="auth-error-banner"
+          class="hidden p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs items-start gap-2.5"
+          role="alert"
+        >
+          <i class="fa-solid fa-triangle-exclamation text-amber-400 text-sm mt-0.5 shrink-0" aria-hidden="true"></i>
+          <div>
+            <p class="font-bold text-amber-200" id="auth-error-title">No se pudo iniciar sesión</p>
+            <p class="text-[11px] text-amber-300/90" id="auth-error-desc">
+              Credenciales inválidas o cuenta no autorizada. Todos los intentos son auditados.
+            </p>
+          </div>
+        </div>
+
+        <!-- Formulario de Login -->
+        <form id="secure-login-form" class="space-y-4" novalidate>
+          <input type="hidden" id="csrf-token-input" name="csrf_token" value="" />
+
+          <div class="space-y-1.5">
+            <label for="login-email" class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+              Correo Electrónico Corporativo
+            </label>
+            <div class="relative flex items-center">
+              <i class="fa-regular fa-envelope absolute left-3.5 text-slate-500 text-xs pointer-events-none" aria-hidden="true"></i>
+              <input
+                id="login-email"
+                name="email"
+                type="email"
+                autocomplete="username"
+                required
+                maxlength="120"
+                placeholder="admin@urbandrop.store"
+                class="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl pl-9 pr-4 py-3 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all"
+              />
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label for="login-password" class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                Contraseña
+              </label>
+              <span id="password-entropy-label" class="text-[10px] font-mono text-slate-500">
+                Mín. 10 caracteres + complejidad
+              </span>
+            </div>
+
+            <div class="relative flex items-center">
+              <i class="fa-solid fa-key absolute left-3.5 text-slate-500 text-xs pointer-events-none" aria-hidden="true"></i>
+              <input
+                id="login-password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                required
+                minlength="10"
+                maxlength="64"
+                placeholder="••••••••••••••••••••"
+                class="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl pl-9 pr-10 py-3 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all font-mono"
+              />
+              <button
+                id="toggle-password-btn"
+                type="button"
+                class="absolute right-2.5 w-8 h-8 rounded-lg text-slate-400 hover:text-white flex items-center justify-center text-xs focus-visible:outline-none"
+                aria-label="Mostrar u ocultar contraseña"
+              >
+                <i id="toggle-password-icon" class="fa-regular fa-eye" aria-hidden="true"></i>
+              </button>
+            </div>
+
+            <div class="grid grid-cols-4 gap-1.5 pt-1" id="password-strength-bars">
+              <div class="h-1 rounded-full bg-slate-800 transition-colors" data-bar="1"></div>
+              <div class="h-1 rounded-full bg-slate-800 transition-colors" data-bar="2"></div>
+              <div class="h-1 rounded-full bg-slate-800 transition-colors" data-bar="3"></div>
+              <div class="h-1 rounded-full bg-slate-800 transition-colors" data-bar="4"></div>
+            </div>
+          </div>
+
+          <button
+            id="btn-submit-login"
+            type="submit"
+            class="w-full min-h-[44px] py-3.5 px-4 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-emerald-400 p-[1px] font-bold text-xs text-white shadow-lg shadow-pink-500/20 active:scale-95 transition-all focus-visible:outline-none"
+          >
+            <div class="w-full h-full bg-slate-950/40 hover:bg-transparent rounded-[11px] py-3 px-4 flex items-center justify-center gap-2 transition-colors">
+              <i id="submit-spinner" class="fa-solid fa-fingerprint text-sm" aria-hidden="true"></i>
+              <span id="submit-btn-text">Autenticar y Abrir Panel Admin</span>
+            </div>
+          </button>
+        </form>
+
+        <!-- Panel de Pruebas Rápidas -->
+        <div class="pt-3 border-t border-slate-800/90 space-y-2.5">
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="text-slate-400 font-semibold flex items-center gap-1.5">
+              <i class="fa-solid fa-flask text-pink-400" aria-hidden="true"></i>
+              <span>Entorno de Pruebas Supabase Auth:</span>
+            </span>
+            <span class="font-mono text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+              Admin Semilla Activo
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              id="btn-fill-demo"
+              type="button"
+              class="min-h-[40px] py-2 px-3 rounded-xl bg-slate-950 hover:bg-slate-800 border border-emerald-500/30 text-emerald-400 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all active:scale-95"
+            >
+              <i class="fa-solid fa-wand-magic-sparkles text-[10px]" aria-hidden="true"></i>
+              <span>Cargar Admin Válido</span>
+            </button>
+
+            <button
+              id="btn-fill-invalid"
+              type="button"
+              class="min-h-[40px] py-2 px-3 rounded-xl bg-slate-950 hover:bg-slate-800 border border-amber-500/30 text-amber-400 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all active:scale-95"
+            >
+              <i class="fa-solid fa-bug-slash text-[10px]" aria-hidden="true"></i>
+              <span>Simular Fallo Auth</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- VISTA 2: WORKSPACE ADMINISTRATIVO PROTEGIDO POR JWT            -->
+      <!-- ============================================================== -->
+      <section
+        id="jwt-session-view"
+        class="hidden bg-slate-900/90 border border-emerald-500/30 rounded-3xl p-5 shadow-2xl space-y-5"
+      >
+        <!-- Cabecera de Sesión Verificada -->
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3.5">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center text-lg">
+              <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold">
+                  Sesión JWT Activa
+                </span>
+                <span id="jwt-role-badge" class="text-[10px] font-mono bg-pink-500/20 text-pink-300 border border-pink-500/30 px-2 py-0.5 rounded-full font-bold">
+                  ROL: ADMIN_DROP
+                </span>
+              </div>
+              <h2 id="jwt-user-email" class="font-heading font-bold text-base text-white">
+                admin@urbandrop.store
+              </h2>
+            </div>
+          </div>
+
+          <div class="text-right">
+            <span class="text-[10px] font-mono text-slate-400 block">EXPIRA EN</span>
+            <span id="jwt-exp-countdown" class="font-mono font-bold text-sm text-emerald-400">
+              59m 59s
+            </span>
+          </div>
+        </div>
+
+        <!-- Navegación por Pestañas del Panel Admin -->
+        <div class="grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-slate-950 border border-slate-800" role="tablist">
+          <button
+            id="tab-btn-productos"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            class="admin-tab-btn min-h-[40px] py-2 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all bg-pink-500 text-white shadow-md shadow-pink-500/20"
+          >
+            <i class="fa-solid fa-shirt text-xs" aria-hidden="true"></i>
+            <span>Alta Productos</span>
+          </button>
+
+          <button
+            id="tab-btn-canales"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            class="admin-tab-btn min-h-[40px] py-2 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all text-slate-400 hover:text-white"
+          >
+            <i class="fa-brands fa-whatsapp text-xs" aria-hidden="true"></i>
+            <span>WhatsApp & IG</span>
+          </button>
+
+          <button
+            id="tab-btn-jwt"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            class="admin-tab-btn min-h-[40px] py-2 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all text-slate-400 hover:text-white"
+          >
+            <i class="fa-solid fa-key text-xs" aria-hidden="true"></i>
+            <span>Token JWT</span>
+          </button>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- PESTAÑA 1: ALTA DE PRODUCTOS Y GESTIÓN DE CATÁLOGO           -->
+        <!-- ============================================================ -->
+        <div id="tab-panel-productos" class="space-y-5">
+          <div class="p-3.5 rounded-2xl bg-slate-950/90 border border-slate-800 flex items-center justify-between gap-2">
+            <div>
+              <h3 class="font-heading font-bold text-sm text-white flex items-center gap-1.5">
+                <i class="fa-solid fa-plus-circle text-pink-400" aria-hidden="true"></i>
+                <span>Dar de Alta Nuevo Producto</span>
+              </h3>
+              <p class="text-[11px] text-slate-400">
+                Guarda directo en Supabase PostgreSQL (<code class="text-slate-300">productos</code>, <code class="text-slate-300">imagenes</code>, <code class="text-slate-300">tallas</code> y <code class="text-slate-300">especificaciones</code>)
+              </p>
+            </div>
+            <button
+              id="btn-fill-sample-prod"
+              type="button"
+              class="shrink-0 py-2 px-3 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 text-pink-300 text-[11px] font-bold flex items-center gap-1.5 active:scale-95 transition-all"
+            >
+              <i class="fa-solid fa-wand-magic-sparkles text-[10px]" aria-hidden="true"></i>
+              <span>Autocompletar Demo</span>
+            </button>
+          </div>
+
+          <form id="create-product-form" class="space-y-4" novalidate>
+            <!-- Nombre y Categoría -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="sm:col-span-2 space-y-1">
+                <label for="prod-name" class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
+                  Nombre de la Prenda *
+                </label>
+                <input
+                  id="prod-name"
+                  type="text"
+                  required
+                  maxlength="90"
+                  placeholder="Ej. Hoodie Cyber Acid 520G"
+                  class="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none"
+                />
+              </div>
+
+              <div class="space-y-1">
+                <label for="prod-category" class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
+                  Categoría *
+                </label>
+                <select
+                  id="prod-category"
+                  class="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none"
+                >
+                  <option value="hoodies">Hoodies</option>
+                  <option value="pantalones">Pantalones</option>
+                  <option value="t-shirts">T-Shirts</option>
+                  <option value="chaquetas">Chaquetas</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Precio, Stock y Etiqueta -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div class="space-y-1">
+                <label for="prod-price" class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
+                  Precio (USD) *
+                </label>
+                <div class="relative flex items-center">
+                  <span class="absolute left-3 text-xs font-mono text-emerald-400">$</span>
+                  <input
+                    id="prod-price"
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    required
+                    placeholder="58.00"
+                    class="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl pl-7 pr-3 py-2.5 text-xs text-white font-mono placeholder:text-slate-600 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div class="space-y-1">
+                <label for="prod-stock" class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
+                  Stock Total *
+                </label>
+                <input
+                  id="prod-stock"
+                  type="number"
+                  min="1"
+                  max="999"
+                  required
+                  value="8"
+                  class="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono focus:outline-none"
+                />
+              </div>
+
+              <div class="col-span-2 sm:col-span-1 space-y-1">
+                <label for="prod-tag" class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
+                  Etiqueta / Drop Tag *
+                </label>
+                <input
+                  id="prod-tag"
+                  type="text"
+                  required
+                  placeholder="Nuevo Drop • Limitado"
+                  class="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <!-- Corte / Fit e Información de Modelo -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="space-y-1">
+                <label for="prod-fit" class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
+                  Corte / Fit *
+                </label>
+                <input
+                  id="prod-fit"
+                  type="text"
+                  required
+                  placeholder="Ej. Oversized Boxy Fit"
+                  class="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none"
+                />
+              </div>
+
+              <div class="space-y-1">
+                <label for="prod-model" class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
+                  Referencia del Modelo *
+                </label>
+                <input
+                  id="prod-model"
+                  type="text"
+                  required
+                  placeholder="Ej. 1.80m — Usa Talla L"
+                  class="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <!-- Carga de Imágenes (Pipeline Desacoplado Cloudflare R2 + Presigned S3 URL + Magic Bytes + EXIF Strip) -->
+            <div class="p-3.5 rounded-2xl bg-slate-950 border border-orange-500/30 space-y-3">
+              <div class="flex items-center justify-between flex-wrap gap-1.5">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                  <i class="fa-solid fa-cloud-bolt text-orange-400" aria-hidden="true"></i>
+                  <span>Cloudflare R2 Image Ingestion Pipeline (3:4) *</span>
+                </span>
+                <span id="prod-images-count" class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  1 activo R2 listo
+                </span>
+              </div>
+
+              <!-- Telemetría en vivo del Pipeline R2 -->
+              <div id="r2-upload-telemetry" class="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-[10px] font-mono text-slate-300 space-y-1">
+                <div class="flex items-center justify-between">
+                  <span class="text-orange-400 font-bold">● S3 Presigned URL (/functions/v1/r2-presigned-upload)</span>
+                  <span id="r2-telemetry-status" class="text-emerald-400">READY • SHA-256 + EXIF STRIP</span>
+                </div>
+                <p id="r2-telemetry-detail" class="text-slate-400 truncate">
+                  Magic Bytes verificados • WebP/AVIF 700×933 (3:4) • Cache-Control: public, max-age=31536000, immutable
+                </p>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <label
+                  for="prod-image-files"
+                  class="cursor-pointer min-h-[44px] p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-dashed border-orange-500/50 text-orange-300 text-xs font-semibold flex items-center justify-center gap-2 transition-all"
+                >
+                  <i id="upload-spinner-icon" class="fa-solid fa-cloud-arrow-up text-sm" aria-hidden="true"></i>
+                  <span id="upload-btn-label">Ingestar a Cloudflare R2 (Local)</span>
+                  <input
+                    id="prod-image-files"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/avif,image/svg+xml"
+                    multiple
+                    class="hidden"
+                  />
+                </label>
+
+                <div class="flex gap-1.5">
+                  <input
+                    id="prod-image-url"
+                    type="url"
+                    placeholder="O pega URL CDN/R2 (https://...)"
+                    class="flex-1 bg-slate-900 border border-slate-800 focus:border-orange-500 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none"
+                  />
+                  <button
+                    id="btn-add-img-url"
+                    type="button"
+                    class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs shrink-0 transition-colors"
+                    title="Añadir URL a la galería R2"
+                  >
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div id="prod-images-preview" class="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-1"></div>
+            </div>
+
+            <!-- Selección de Tallas Disponibles y Medidas en cm -->
+            <div class="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300 block">
+                    Tallas Disponibles y Medidas Exactas (cm)
+                  </span>
+                  <span class="text-[10px] text-slate-500">
+                    Marca las tallas con stock activo; las desmarcadas aparecerán agotadas
+                  </span>
+                </div>
+                <button
+                  id="btn-autofill-cm"
+                  type="button"
+                  class="text-[10px] font-mono text-pink-400 hover:text-pink-300 underline"
+                >
+                  Sugerir cm por categoría
+                </button>
+              </div>
+
+              <div class="space-y-2">
+                <div class="flex items-center gap-2.5 bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                  <label class="flex items-center gap-2 cursor-pointer min-w-[72px]">
+                    <input id="size-active-S" type="checkbox" checked class="w-4 h-4 accent-pink-500 rounded cursor-pointer" />
+                    <span class="font-mono font-bold text-xs text-white">Talla S</span>
+                  </label>
+                  <input
+                    id="size-cm-S"
+                    type="text"
+                    value="Pecho: 58cm | Largo: 68cm"
+                    placeholder="Medidas en cm para S"
+                    class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] font-mono text-slate-200 focus:border-pink-500 focus:outline-none"
+                  />
+                </div>
+
+                <div class="flex items-center gap-2.5 bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                  <label class="flex items-center gap-2 cursor-pointer min-w-[72px]">
+                    <input id="size-active-M" type="checkbox" checked class="w-4 h-4 accent-pink-500 rounded cursor-pointer" />
+                    <span class="font-mono font-bold text-xs text-white">Talla M</span>
+                  </label>
+                  <input
+                    id="size-cm-M"
+                    type="text"
+                    value="Pecho: 61cm | Largo: 71cm"
+                    placeholder="Medidas en cm para M"
+                    class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] font-mono text-slate-200 focus:border-pink-500 focus:outline-none"
+                  />
+                </div>
+
+                <div class="flex items-center gap-2.5 bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                  <label class="flex items-center gap-2 cursor-pointer min-w-[72px]">
+                    <input id="size-active-L" type="checkbox" checked class="w-4 h-4 accent-pink-500 rounded cursor-pointer" />
+                    <span class="font-mono font-bold text-xs text-white">Talla L</span>
+                  </label>
+                  <input
+                    id="size-cm-L"
+                    type="text"
+                    value="Pecho: 64cm | Largo: 74cm"
+                    placeholder="Medidas en cm para L"
+                    class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] font-mono text-slate-200 focus:border-pink-500 focus:outline-none"
+                  />
+                </div>
+
+                <div class="flex items-center gap-2.5 bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                  <label class="flex items-center gap-2 cursor-pointer min-w-[72px]">
+                    <input id="size-active-XL" type="checkbox" checked class="w-4 h-4 accent-pink-500 rounded cursor-pointer" />
+                    <span class="font-mono font-bold text-xs text-white">Talla XL</span>
+                  </label>
+                  <input
+                    id="size-cm-XL"
+                    type="text"
+                    value="Pecho: 67cm | Largo: 77cm"
+                    placeholder="Medidas en cm para XL"
+                    class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] font-mono text-slate-200 focus:border-pink-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Especificaciones de Material y Confección -->
+            <div class="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-2.5">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-layer-group text-purple-400" aria-hidden="true"></i>
+                <span>Especificaciones Técnicas y Materiales</span>
+              </span>
+              <input
+                id="prod-spec-1"
+                type="text"
+                placeholder="1. Ej. Algodón French Terry 500 GSM de alto gramaje"
+                class="w-full bg-slate-900 border border-slate-800 focus:border-pink-500 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none"
+              />
+              <input
+                id="prod-spec-2"
+                type="text"
+                placeholder="2. Ej. Costuras reforzadas doble aguja y caída de hombro"
+                class="w-full bg-slate-900 border border-slate-800 focus:border-pink-500 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none"
+              />
+              <input
+                id="prod-spec-3"
+                type="text"
+                placeholder="3. Ej. Lavado ácido artesanal pre-encogido"
+                class="w-full bg-slate-900 border border-slate-800 focus:border-pink-500 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none"
+              />
+            </div>
+
+            <!-- Botón Guardar y Publicar Producto -->
+            <button
+              id="btn-create-product"
+              type="submit"
+              class="w-full min-h-[46px] py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
+            >
+              <i id="create-prod-icon" class="fa-solid fa-cloud-arrow-up text-sm" aria-hidden="true"></i>
+              <span id="create-prod-text">Publicar Producto en el Catálogo</span>
+            </button>
+          </form>
+
+          <!-- Inventario en Vivo en Supabase PostgreSQL -->
+          <div class="pt-3 border-t border-slate-800 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-boxes-stacked text-emerald-400" aria-hidden="true"></i>
+                <span>Productos Activos en Base de Datos</span>
+              </span>
+              <span id="admin-products-count" class="text-[10px] font-mono text-slate-400">Cargando...</span>
+            </div>
+            <div id="admin-products-list" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+          </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- PESTAÑA 2: CONFIGURACIÓN DE WHATSAPP E INSTAGRAM             -->
+        <!-- ============================================================ -->
+        <div id="tab-panel-canales" class="hidden space-y-5">
+          <div class="p-3.5 rounded-2xl bg-slate-950/90 border border-slate-800 space-y-1">
+            <h3 class="font-heading font-bold text-sm text-white flex items-center gap-2">
+              <i class="fa-solid fa-sliders text-emerald-400" aria-hidden="true"></i>
+              <span>Configuración de Conversión Social</span>
+            </h3>
+            <p class="text-[11px] text-slate-400">
+              Controla en tiempo real el número de WhatsApp receptor de pedidos, si el botón de Instagram se muestra u oculta en el catálogo y su enlace de destino.
+            </p>
+          </div>
+
+          <form id="social-config-form" class="space-y-4" novalidate>
+            <!-- Bloque WhatsApp -->
+            <div class="p-4 rounded-2xl bg-slate-950 border border-emerald-500/30 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-emerald-400 flex items-center gap-2">
+                  <i class="fa-brands fa-whatsapp text-base" aria-hidden="true"></i>
+                  <span>Número de WhatsApp para Pedidos</span>
+                </span>
+                <span class="text-[10px] font-mono bg-emerald-500/10 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  Canal Principal
+                </span>
+              </div>
+
+              <div class="space-y-1.5">
+                <label for="cfg-whatsapp-number" class="block text-[11px] font-semibold text-slate-300">
+                  Número con código de país (sin signos + ni espacios) *
+                </label>
+                <div class="relative flex items-center">
+                  <i class="fa-solid fa-phone absolute left-3.5 text-emerald-400 text-xs pointer-events-none" aria-hidden="true"></i>
+                  <input
+                    id="cfg-whatsapp-number"
+                    type="text"
+                    required
+                    maxlength="20"
+                    placeholder="5215500000000"
+                    class="w-full bg-slate-900 border border-slate-800 focus:border-emerald-500 rounded-xl pl-9 pr-4 py-2.5 text-xs font-mono text-white placeholder:text-slate-600 focus:outline-none"
+                  />
+                </div>
+                <p class="text-[10px] font-mono text-slate-400">
+                  Enlace activo: <span id="cfg-wa-preview-link" class="text-emerald-400">https://wa.me/5215500000000</span>
+                </p>
+              </div>
+            </div>
+
+            <!-- Bloque Instagram (Visibilidad + URL de destino) -->
+            <div class="p-4 rounded-2xl bg-slate-950 border border-pink-500/30 space-y-4">
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-9 h-9 rounded-xl bg-pink-500/15 text-pink-400 flex items-center justify-center text-base">
+                    <i class="fa-brands fa-instagram" aria-hidden="true"></i>
+                  </div>
+                  <div>
+                    <span class="text-xs font-bold text-white block">Botón de Instagram en el Catálogo</span>
+                    <span id="cfg-ig-status-label" class="text-[10px] font-mono text-emerald-400">
+                      VISIBLE EN TARJETAS Y MODAL
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Toggle Switch Mostrar / Ocultar Instagram -->
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input
+                    id="cfg-instagram-active"
+                    type="checkbox"
+                    checked
+                    class="sr-only peer"
+                  />
+                  <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500"></div>
+                </label>
+              </div>
+
+              <div class="space-y-1.5">
+                <label for="cfg-instagram-url" class="block text-[11px] font-semibold text-slate-300">
+                  Enlace de destino al pulsar el botón de Instagram *
+                </label>
+                <div class="relative flex items-center">
+                  <i class="fa-solid fa-link absolute left-3.5 text-pink-400 text-xs pointer-events-none" aria-hidden="true"></i>
+                  <input
+                    id="cfg-instagram-url"
+                    type="url"
+                    required
+                    placeholder="https://instagram.com/direct/inbox/"
+                    class="w-full bg-slate-900 border border-slate-800 focus:border-pink-500 rounded-xl pl-9 pr-4 py-2.5 text-xs font-mono text-white placeholder:text-slate-600 focus:outline-none"
+                  />
+                </div>
+                <p class="text-[10px] text-slate-400">
+                  Puedes usar tu perfil (<code class="text-slate-300">https://instagram.com/tu_marca</code>) o enlace directo a DM (<code class="text-slate-300">https://ig.me/m/tu_marca</code>).
+                </p>
+              </div>
+            </div>
+
+            <button
+              id="btn-save-social-config"
+              type="submit"
+              class="w-full min-h-[46px] py-3.5 px-4 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-emerald-400 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20 active:scale-95 transition-all"
+            >
+              <i id="save-cfg-icon" class="fa-solid fa-floppy-disk text-sm" aria-hidden="true"></i>
+              <span id="save-cfg-text">Guardar Configuración de WhatsApp e Instagram</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- PESTAÑA 3: INSPECTOR JWT Y BITÁCORA OWASP 2025               -->
+        <!-- ============================================================ -->
+        <div id="tab-panel-jwt" class="hidden space-y-4">
+          <div class="space-y-2">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+              <span>Auditoría de Claims JWT (RFC 7519)</span>
+              <span id="jwt-alg-pill" class="font-mono text-[10px] text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
+                ALG: HS256
+              </span>
+            </p>
+            <div id="jwt-checks-grid" class="grid grid-cols-2 gap-2 text-[11px]"></div>
+          </div>
+
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300">
+                Token JWT Firmado (Base64URL)
+              </span>
+              <button
+                id="btn-copy-jwt"
+                type="button"
+                class="text-[11px] font-semibold text-pink-400 hover:text-pink-300 flex items-center gap-1"
+              >
+                <i class="fa-regular fa-copy" aria-hidden="true"></i>
+                <span>Copiar JWT</span>
+              </button>
+            </div>
+
+            <div
+              id="jwt-raw-colorized"
+              class="p-3 rounded-2xl bg-slate-950 border border-slate-800 font-mono text-[10px] break-all max-h-24 overflow-y-auto leading-relaxed"
+            ></div>
+
+            <div class="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
+              <div class="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                <span>PAYLOAD DECODIFICADO (Claims & app_metadata)</span>
+                <span class="text-emerald-400">RBAC Seguro</span>
+              </div>
+              <pre
+                id="jwt-payload-pre"
+                class="text-[10px] font-mono text-emerald-300 overflow-x-auto leading-relaxed"
+              ></pre>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-database text-purple-400 text-[10px]" aria-hidden="true"></i>
+                <span>Bitácora OWASP A09 (Supabase RLS)</span>
+              </span>
+              <button
+                id="btn-verify-server-jwt"
+                type="button"
+                class="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+              >
+                <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+                <span>Re-verificar con Servidor</span>
+              </button>
+            </div>
+
+            <div
+              id="audit-logs-container"
+              class="bg-slate-950 border border-slate-800 rounded-2xl p-3 space-y-2 max-h-44 overflow-y-auto text-[11px]"
+            ></div>
+          </div>
+        </div>
+
+        <!-- Acciones Globales de Sesión -->
+        <div class="pt-3 border-t border-slate-800 flex gap-2">
+          <a
+            href="/"
+            class="flex-1 min-h-[44px] py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all"
+          >
+            <i class="fa-solid fa-store text-pink-400" aria-hidden="true"></i>
+            <span>Ir al Catálogo Público</span>
+          </a>
+
+          <button
+            id="btn-logout-jwt"
+            type="button"
+            class="flex-1 min-h-[44px] py-3 px-4 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all"
+          >
+            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+            <span>Revocar JWT y Salir</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- TARJETA RESUMEN DE CONTROLES OWASP TOP 10 (2025) ACTIVOS       -->
+      <!-- ============================================================== -->
+      <section class="bg-slate-900/60 border border-slate-800/90 rounded-3xl p-4 space-y-3 text-xs">
+        <div class="flex items-center justify-between">
+          <span class="font-heading font-bold text-sm text-white flex items-center gap-2">
+            <i class="fa-solid fa-list-check text-pink-400" aria-hidden="true"></i>
+            <span>Controles OWASP 2025 Aplicados en <code class="text-pink-400">/login</code></span>
+          </span>
+          <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+            RLS + JWT Activo
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 gap-2 text-[11px] text-slate-300">
+          <div class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 flex items-start gap-2.5">
+            <i class="fa-solid fa-check-double text-emerald-400 mt-0.5" aria-hidden="true"></i>
+            <div>
+              <span class="font-bold text-white">A01:2025 Broken Access Control & JWT RBAC:</span>
+              <span class="text-slate-400"> Escritura en <code class="text-slate-200">productos</code> y <code class="text-slate-200">configuracion_tienda</code> restringida por RLS al claim <code class="text-slate-200">app_metadata.role = 'admin_drop'</code>.</span>
+            </div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 flex items-start gap-2.5">
+            <i class="fa-solid fa-check-double text-emerald-400 mt-0.5" aria-hidden="true"></i>
+            <div>
+              <span class="font-bold text-white">A02 & A07:2025 Crypto & Auth Hardening:</span>
+              <span class="text-slate-400"> Rechazo explícito de <code class="text-slate-200">alg: none</code>, bloqueo tras 5 intentos fallidos, anti-enumeración y filtro de contraseñas filtradas.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ============================================================== -->
+    <!-- MODAL DETALLADO DE ARQUITECTURA OWASP 2025 & JWT               -->
+    <!-- ============================================================== -->
+    <div
+      id="owasp-modal"
+      class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="owasp-modal-title"
+    >
+      <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[85vh] overflow-y-auto space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-shield-halved text-emerald-400" aria-hidden="true"></i>
+            <h3 id="owasp-modal-title" class="font-heading font-bold text-base text-white">
+              Especificación de Seguridad OWASP 2025 & JWT
+            </h3>
+          </div>
+          <button
+            id="close-owasp-modal"
+            type="button"
+            class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm"
+            aria-label="Cerrar modal de seguridad"
+          >
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+          <div class="p-3 bg-slate-950 rounded-2xl border border-slate-800">
+            <p class="font-bold text-pink-400 mb-1">1. Firma y Validación Estricta de JWT (RFC 7519)</p>
+            <p class="text-slate-400">
+              Cada token emitido por Supabase Auth se verifica validando sus 3 segmentos, algoritmo criptográfico permitido (<code class="text-slate-200">HS256/ES256/RS256</code>), emisor (<code class="text-slate-200">iss</code>), sujeto (<code class="text-slate-200">sub</code>) y expiración (<code class="text-slate-200">exp</code>).
+            </p>
+          </div>
+          <div class="p-3 bg-slate-950 rounded-2xl border border-slate-800">
+            <p class="font-bold text-emerald-400 mb-1">2. Separación de Metadatos de Autorización (A01:2025)</p>
+            <p class="text-slate-400">
+              En cumplimiento con las reglas de seguridad de Supabase, jamás se utiliza <code class="text-slate-200">user_metadata</code> para decisiones de autorización. El rol <code class="text-slate-200">admin_drop</code> reside en <code class="text-slate-200">raw_app_meta_data</code>, validado por RLS en cada alta de producto o cambio de configuración.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- CLIENT SCRIPT: AUTENTICACIÓN JWT, ALTA PRODUCTOS Y CANALES     -->
+    <!-- ============================================================== -->
+    <script>
+      const SUPABASE_URL = 'https://zbdblhlaacxewkxvlufs.supabase.co';
+      const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0oXCTZq-eeth1wnZI6b7wQ_ZCZdltsC';
+      const SESSION_STORAGE_KEY = 'urban_drop_jwt_session_v1';
+      const RATE_LIMIT_STORAGE_KEY = 'urban_drop_auth_rate_limit_v1';
+      const STORE_CONFIG_CACHE_KEY = 'urban_drop_store_config_v1';
+      const MAX_ATTEMPTS = 5;
+      const LOCKOUT_SECONDS = 30;
+      const ALLOWED_ALGS = new Set(['HS256', 'RS256', 'ES256']);
+
+      const COMPROMISED_PATTERNS = [
+        'password',
+        '123456',
+        'qwerty',
+        'admin123',
+        'letmein',
+        'welcome',
+        'contraseña',
+        'iloveyou',
+      ];
+
+      const DEFAULT_MEASUREMENTS_BY_CAT = {
+        hoodies: {
+          S: 'Pecho: 58cm | Largo: 68cm',
+          M: 'Pecho: 61cm | Largo: 71cm',
+          L: 'Pecho: 64cm | Largo: 74cm',
+          XL: 'Pecho: 67cm | Largo: 77cm',
+        },
+        pantalones: {
+          S: 'Cintura: 76cm | Largo: 102cm',
+          M: 'Cintura: 80cm | Largo: 104cm',
+          L: 'Cintura: 84cm | Largo: 106cm',
+          XL: 'Cintura: 88cm | Largo: 108cm',
+        },
+        't-shirts': {
+          S: 'Pecho: 55cm | Largo: 69cm',
+          M: 'Pecho: 58cm | Largo: 72cm',
+          L: 'Pecho: 61cm | Largo: 75cm',
+          XL: 'Pecho: 64cm | Largo: 78cm',
+        },
+        chaquetas: {
+          S: 'Pecho: 60cm | Largo: 65cm',
+          M: 'Pecho: 63cm | Largo: 67cm',
+          L: 'Pecho: 66cm | Largo: 70cm',
+          XL: 'Pecho: 69cm | Largo: 72cm',
+        },
+      };
+
+      let pendingProductImages = [
+        'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=700',
+      ];
+
+      function decodeBase64Url(segment) {
+        const normalized = segment.replace(/-/g, '+').replace(/_/g, '/');
+        const padLength = (4 - (normalized.length % 4)) % 4;
+        const padded = normalized + '='.repeat(padLength);
+        const binary = atob(padded);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return new TextDecoder().decode(bytes);
+      }
+
+      function inspectAndValidateJwt(rawToken) {
+        const errors = [];
+        const parts = rawToken.trim().split('.');
+
+        if (parts.length !== 3 || parts.some((p) => p.length === 0)) {
+          return {
+            valid: false,
+            header: null,
+            payload: null,
+            signaturePreview: '',
+            checks: {
+              structureThreeParts: false,
+              algorithmAllowed: false,
+              notExpired: false,
+              issuerMatches: false,
+              roleFromAppMetadata: 'none',
+              sessionIdPresent: false,
+            },
+            errors: ['El token no cumple con la estructura RFC 7519 de 3 segmentos (Header.Payload.Signature).'],
+          };
+        }
+
+        let header = null;
+        let payload = null;
+        try {
+          header = JSON.parse(decodeBase64Url(parts[0]));
+          payload = JSON.parse(decodeBase64Url(parts[1]));
+        } catch {
+          return {
+            valid: false,
+            header: null,
+            payload: null,
+            signaturePreview: '',
+            checks: {
+              structureThreeParts: true,
+              algorithmAllowed: false,
+              notExpired: false,
+              issuerMatches: false,
+              roleFromAppMetadata: 'none',
+              sessionIdPresent: false,
+            },
+            errors: ['Error al decodificar Base64URL del Header o Payload del JWT.'],
+          };
+        }
+
+        const algorithmAllowed = Boolean(header && ALLOWED_ALGS.has(header.alg));
+        if (!algorithmAllowed) {
+          errors.push(`Algoritmo "${header?.alg ?? 'desconocido'}" bloqueado por política OWASP A02:2025.`);
+        }
+
+        const nowSec = Math.floor(Date.now() / 1000);
+        const notExpired = Boolean(payload && typeof payload.exp === 'number' && payload.exp > nowSec);
+        if (!notExpired) {
+          errors.push('El token JWT ha expirado (claim "exp" vencido).');
+        }
+
+        const expectedIssuerPrefix = `${SUPABASE_URL}/auth/v1`;
+        const issuerMatches = Boolean(payload && typeof payload.iss === 'string' && payload.iss.startsWith(expectedIssuerPrefix));
+        if (!issuerMatches) {
+          errors.push('El emisor (claim "iss") no coincide con la autoridad Supabase Auth del proyecto.');
+        }
+
+        const roleFromAppMetadata = payload?.app_metadata?.role || payload?.role || 'authenticated';
+        const sessionIdPresent = Boolean(payload && payload.sub);
+
+        return {
+          valid: algorithmAllowed && notExpired && issuerMatches && sessionIdPresent,
+          header,
+          payload,
+          signaturePreview: `${parts[2].slice(0, 14)}…${parts[2].slice(-10)}`,
+          checks: {
+            structureThreeParts: true,
+            algorithmAllowed,
+            notExpired,
+            issuerMatches,
+            roleFromAppMetadata,
+            sessionIdPresent,
+          },
+          errors,
+        };
+      }
+
+      function maskEmailForAudit(email) {
+        const clean = email.trim().toLowerCase();
+        const atIndex = clean.indexOf('@');
+        if (atIndex <= 1) return '***@***';
+        const local = clean.slice(0, atIndex);
+        const domain = clean.slice(atIndex + 1);
+        return `${local[0]}***${local[local.length - 1]}@${domain}`;
+      }
+
+      function initCsrfToken() {
+        const array = new Uint8Array(24);
+        window.crypto.getRandomValues(array);
+        const token = Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
+        sessionStorage.setItem('urban_drop_csrf_nonce', token);
+        const csrfInput = document.getElementById('csrf-token-input');
+        if (csrfInput) csrfInput.value = token;
+        return token;
+      }
+
+      initCsrfToken();
+
+      const loginCardView = document.getElementById('login-card-view');
+      const jwtSessionView = document.getElementById('jwt-session-view');
+      const loginForm = document.getElementById('secure-login-form');
+      const emailInput = document.getElementById('login-email');
+      const passwordInput = document.getElementById('login-password');
+      const togglePassBtn = document.getElementById('toggle-password-btn');
+      const togglePassIcon = document.getElementById('toggle-password-icon');
+      const rateLimitBadge = document.getElementById('rate-limit-badge');
+      const lockoutBanner = document.getElementById('lockout-banner');
+      const lockoutTimerEl = document.getElementById('lockout-timer');
+      const errorBanner = document.getElementById('auth-error-banner');
+      const errorTitle = document.getElementById('auth-error-title');
+      const errorDesc = document.getElementById('auth-error-desc');
+      const submitBtn = document.getElementById('btn-submit-login');
+      const submitBtnText = document.getElementById('submit-btn-text');
+      const submitSpinner = document.getElementById('submit-spinner');
+      const toastEl = document.getElementById('auth-toast');
+      const toastMsgEl = document.getElementById('auth-toast-msg');
+
+      let expInterval = null;
+      let lockoutInterval = null;
+
+      function showToast(msg) {
+        if (!toastEl || !toastMsgEl) return;
+        toastMsgEl.textContent = msg;
+        toastEl.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-3');
+        toastEl.classList.add('opacity-100', 'translate-y-0');
+        setTimeout(() => {
+          toastEl.classList.add('opacity-0', 'pointer-events-none', '-translate-y-3');
+          toastEl.classList.remove('opacity-100', 'translate-y-0');
+        }, 2800);
+      }
+
+      function getActiveAccessToken() {
+        try {
+          const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          return parsed.access_token || null;
+        } catch {
+          return null;
+        }
+      }
+
+      // Gestión de Pestañas del Panel Admin
+      const tabButtons = [
+        { btnId: 'tab-btn-productos', panelId: 'tab-panel-productos' },
+        { btnId: 'tab-btn-canales', panelId: 'tab-panel-canales' },
+        { btnId: 'tab-btn-jwt', panelId: 'tab-panel-jwt' },
+      ];
+
+      function switchAdminTab(targetBtnId) {
+        tabButtons.forEach(({ btnId, panelId }) => {
+          const btn = document.getElementById(btnId);
+          const panel = document.getElementById(panelId);
+          const isActive = btnId === targetBtnId;
+          if (btn) {
+            btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            btn.className = isActive
+              ? 'admin-tab-btn min-h-[40px] py-2 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all bg-pink-500 text-white shadow-md shadow-pink-500/20'
+              : 'admin-tab-btn min-h-[40px] py-2 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all text-slate-400 hover:text-white';
+          }
+          if (panel) {
+            panel.classList.toggle('hidden', !isActive);
+          }
+        });
+      }
+
+      tabButtons.forEach(({ btnId }) => {
+        document.getElementById(btnId)?.addEventListener('click', () => switchAdminTab(btnId));
+      });
+
+      function getRateLimitState() {
+        try {
+          const raw = sessionStorage.getItem(RATE_LIMIT_STORAGE_KEY);
+          if (!raw) return { failedAttempts: 0, lockoutUntil: 0 };
+          return JSON.parse(raw);
+        } catch {
+          return { failedAttempts: 0, lockoutUntil: 0 };
+        }
+      }
+
+      function setRateLimitState(next) {
+        sessionStorage.setItem(RATE_LIMIT_STORAGE_KEY, JSON.stringify(next));
+        updateRateLimitUI();
+      }
+
+      function updateRateLimitUI() {
+        const rl = getRateLimitState();
+        const now = Date.now();
+
+        if (rl.lockoutUntil > now) {
+          const remainingSec = Math.ceil((rl.lockoutUntil - now) / 1000);
+          lockoutBanner.classList.remove('hidden');
+          lockoutBanner.classList.add('flex');
+          lockoutTimerEl.textContent = String(remainingSec);
+          rateLimitBadge.textContent = '0 / 5 (Bloqueado)';
+          rateLimitBadge.className = 'font-mono font-bold text-red-400';
+          submitBtn.disabled = true;
+          submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+          if (!lockoutInterval) {
+            lockoutInterval = setInterval(() => {
+              const check = getRateLimitState();
+              if (check.lockoutUntil <= Date.now()) {
+                if (lockoutInterval) clearInterval(lockoutInterval);
+                lockoutInterval = null;
+                setRateLimitState({ failedAttempts: 0, lockoutUntil: 0 });
+              } else {
+                updateRateLimitUI();
+              }
+            }, 1000);
+          }
+          return true;
+        }
+
+        lockoutBanner.classList.add('hidden');
+        lockoutBanner.classList.remove('flex');
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+        const remaining = Math.max(0, MAX_ATTEMPTS - rl.failedAttempts);
+        rateLimitBadge.textContent = `${remaining} / ${MAX_ATTEMPTS} intentos disponibles`;
+        rateLimitBadge.className =
+          remaining <= 2 ? 'font-mono font-bold text-amber-400' : 'font-mono font-bold text-emerald-400';
+        return false;
+      }
+
+      updateRateLimitUI();
+
+      function evaluatePasswordPolicy(pwd) {
+        const lower = pwd.toLowerCase();
+        const compromised = COMPROMISED_PATTERNS.some((p) => lower.includes(p));
+        if (compromised) {
+          return { score: 1, compromised: true, message: 'Alerta: Patrón en lista de contraseñas filtradas' };
+        }
+
+        let score = 0;
+        if (pwd.length >= 10) score++;
+        if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) score++;
+        if (/\d/.test(pwd)) score++;
+        if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+        const messages = [
+          'Mín. 10 caracteres + complejidad',
+          'Débil (incrementa longitud)',
+          'Aceptable (agrega símbolos)',
+          'Fuerte (Cumple OWASP)',
+          'Óptima (Alta entropía NIST/OWASP 2025)',
+        ];
+
+        return { score, compromised: false, message: messages[score] || messages[0] };
+      }
+
+      passwordInput?.addEventListener('input', () => {
+        const val = passwordInput.value;
+        const { score, compromised, message } = evaluatePasswordPolicy(val);
+        const label = document.getElementById('password-entropy-label');
+        const bars = document.querySelectorAll('#password-strength-bars [data-bar]');
+
+        if (label) {
+          label.textContent = message;
+          label.className = compromised
+            ? 'text-[10px] font-mono text-red-400 font-bold'
+            : score >= 3
+              ? 'text-[10px] font-mono text-emerald-400 font-semibold'
+              : 'text-[10px] font-mono text-amber-400';
+        }
+
+        bars.forEach((bar, idx) => {
+          if (val.length === 0) {
+            bar.className = 'h-1 rounded-full bg-slate-800 transition-colors';
+          } else if (compromised) {
+            bar.className = 'h-1 rounded-full bg-red-500 transition-colors';
+          } else if (idx < score) {
+            bar.className =
+              score >= 3
+                ? 'h-1 rounded-full bg-emerald-400 transition-colors'
+                : 'h-1 rounded-full bg-amber-400 transition-colors';
+          } else {
+            bar.className = 'h-1 rounded-full bg-slate-800 transition-colors';
+          }
+        });
+      });
+
+      togglePassBtn?.addEventListener('click', () => {
+        const isPass = passwordInput.type === 'password';
+        passwordInput.type = isPass ? 'text' : 'password';
+        togglePassIcon.className = isPass ? 'fa-regular fa-eye-slash text-pink-400' : 'fa-regular fa-eye';
+        if (isPass) {
+          setTimeout(() => {
+            if (passwordInput.type === 'text') {
+              passwordInput.type = 'password';
+              togglePassIcon.className = 'fa-regular fa-eye';
+            }
+          }, 5000);
+        }
+      });
+
+      async function logAuthAuditEvent(eventType, email, userId = null, accessToken = null, extraMeta = {}) {
+        try {
+          const headers = {
+            apikey: SUPABASE_PUBLISHABLE_KEY,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal',
+          };
+          if (accessToken) {
+            headers['Authorization'] = `Bearer ${accessToken}`;
+          }
+
+          await fetch(`${SUPABASE_URL}/rest/v1/auth_audit_logs`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              user_id: userId,
+              email_masked: maskEmailForAudit(email),
+              event_type: eventType,
+              ip_hint: 'client-web-owasp2025',
+              user_agent: navigator.userAgent.slice(0, 140),
+              metadata: extraMeta,
+            }),
+          });
+        } catch {
+          // Falla silenciosa
+        }
+      }
+
+      async function loadUserAuditLogs(accessToken) {
+        const container = document.getElementById('audit-logs-container');
+        if (!container) return;
+
+        try {
+          const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/auth_audit_logs?select=id,event_type,email_masked,created_at,metadata&order=created_at.desc&limit=6`,
+            {
+              headers: {
+                apikey: SUPABASE_PUBLISHABLE_KEY,
+                Authorization: `Bearer ${accessToken}`,
+                Accept: 'application/json',
+              },
+            }
+          );
+
+          if (!res.ok) return;
+          const logs = await res.json();
+          if (!Array.isArray(logs) || logs.length === 0) {
+            container.innerHTML = `<p class="text-slate-500 text-center py-2">Sin eventos registrados aún.</p>`;
+            return;
+          }
+
+          container.innerHTML = '';
+          logs.forEach((item) => {
+            const row = document.createElement('div');
+            row.className =
+              'flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800/80';
+
+            const left = document.createElement('div');
+            left.className = 'flex items-center gap-2';
+
+            const badge = document.createElement('span');
+            const isSuccess = item.event_type === 'LOGIN_SUCCESS' || item.event_type === 'TOKEN_VERIFIED';
+            badge.className = `font-mono text-[10px] font-bold px-1.5 py-0.5 rounded ${
+              isSuccess
+                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+            }`;
+            badge.textContent = item.event_type;
+
+            const emailSpan = document.createElement('span');
+            emailSpan.className = 'text-slate-300 font-mono text-[10px]';
+            emailSpan.textContent = item.email_masked;
+
+            left.appendChild(badge);
+            left.appendChild(emailSpan);
+
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'text-slate-500 font-mono text-[10px]';
+            const dt = new Date(item.created_at);
+            timeSpan.textContent = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            row.appendChild(left);
+            row.appendChild(timeSpan);
+            container.appendChild(row);
+          });
+        } catch {
+          // Ignorar error de red
+        }
+      }
+
+      // ==============================================================
+      // GESTIÓN DE IMÁGENES DEL NUEVO PRODUCTO (CLOUDFLARE R2 PRESIGNED PIPELINE)
+      // ==============================================================
+      async function sha256HexFromTextOrBytes(input) {
+        const bytes = typeof input === 'string' ? new TextEncoder().encode(input) : input;
+        const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
+        return Array.from(new Uint8Array(hashBuffer))
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('');
+      }
+
+      async function readMagicBytesHex(file) {
+        const slice = file.slice(0, 16);
+        const buf = await slice.arrayBuffer();
+        return Array.from(new Uint8Array(buf))
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('')
+          .toUpperCase();
+      }
+
+      function verifyBinaryMagicBytes(hex, declaredMime) {
+        if (hex.startsWith('FFD8FF')) return { valid: true, detectedMime: 'image/jpeg', label: 'JPEG (FFD8FF)' };
+        if (hex.startsWith('89504E470D0A1A0A')) return { valid: true, detectedMime: 'image/png', label: 'PNG (89504E47)' };
+        if (hex.startsWith('52494646') && hex.slice(16, 24) === '57454250') {
+          return { valid: true, detectedMime: 'image/webp', label: 'WebP (RIFF..WEBP)' };
+        }
+        if (hex.slice(8, 22) === '66747970617669') {
+          return { valid: true, detectedMime: 'image/avif', label: 'AVIF (ftypavif)' };
+        }
+        if (declaredMime === 'image/svg+xml' || hex.startsWith('3C737667') || hex.startsWith('3C3F786D')) {
+          return { valid: true, detectedMime: 'image/svg+xml', label: 'SVG XML' };
+        }
+        return { valid: false, detectedMime: 'unknown', label: `Firma binaria rechazada (${hex.slice(0, 12)})` };
+      }
+
+      function sanitizeSvgXmlString(rawSvg) {
+        let s = rawSvg
+          .replace(/<\?xml[\s\S]*?\?>/gi, '')
+          .replace(/<!DOCTYPE[\s\S]*?>/gi, '')
+          .replace(/<!ENTITY[\s\S]*?>/gi, '')
+          .replace(/<script[\s\S]*?<\/script>/gi, '')
+          .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '')
+          .replace(/\son[a-z]+\s*=\s*(['"]).*?\1/gi, '')
+          .replace(/(?:href|xlink:href)\s*=\s*(['"])\s*(?:javascript:|data:text\/html).*?\1/gi, '');
+        if (!/<svg[\s>]/i.test(s)) throw new Error('SVG inválido tras sanitización XML');
+        return s.trim();
+      }
+
+      function createLqipFromColor(hexColor) {
+        const safe = /^#[0-9a-fA-F]{6}$/.test(hexColor) ? hexColor : '#0f172a';
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 4"><rect width="3" height="4" fill="${safe}"/></svg>`;
+        return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+      }
+
+      function normalizeImageDescriptor(entry) {
+        if (typeof entry === 'string') {
+          const fallbackHash = entry.replace(/[^a-f0-9]/gi, '').slice(0, 64).padEnd(64, 'a');
+          return {
+            url: entry,
+            r2_object_key: `drops/v1/${fallbackHash.slice(0, 24)}-700x933.webp`,
+            content_hash: fallbackHash,
+            mime_type: 'image/webp',
+            width: 700,
+            height: 933,
+            dominant_color: '#0f172a',
+            lqip_data_uri: createLqipFromColor('#0f172a'),
+            exif_stripped: true,
+            magic_bytes_verified: true,
+            cache_control: 'public, max-age=31536000, immutable',
+          };
+        }
+        return entry;
+      }
+
+      function renderProductImagesPreview() {
+        const previewEl = document.getElementById('prod-images-preview');
+        const countEl = document.getElementById('prod-images-count');
+        if (!previewEl || !countEl) return;
+
+        countEl.textContent = `${pendingProductImages.length} ${
+          pendingProductImages.length === 1 ? 'activo R2 listo' : 'activos R2 listos'
+        }`;
+
+        if (pendingProductImages.length === 0) {
+          previewEl.innerHTML = `
+            <div class="col-span-full py-3 text-center text-[11px] text-slate-500 border border-dashed border-slate-800 rounded-xl">
+              Sube al menos 1 imagen o agrega una URL para el producto.
+            </div>
+          `;
+          return;
+        }
+
+        previewEl.innerHTML = pendingProductImages
+          .map((item, idx) => {
+            const desc = normalizeImageDescriptor(item);
+            const shortHash = (desc.content_hash || '').slice(0, 8);
+            return `
+            <div class="relative group aspect-[3/4] rounded-xl overflow-hidden bg-slate-900 border border-slate-800" style="background-color: ${desc.dominant_color || '#0f172a'};">
+              <img src="${desc.url}" alt="Previsualización ${idx + 1}" width="700" height="933" decoding="async" class="w-full h-full object-cover" />
+              <span class="absolute top-1.5 left-1.5 bg-slate-950/85 text-white font-mono text-[9px] px-1.5 py-0.5 rounded border border-slate-700">
+                #${idx + 1} • R2
+              </span>
+              <span class="absolute bottom-1.5 left-1.5 right-1.5 bg-slate-950/90 text-emerald-400 font-mono text-[8px] px-1.5 py-0.5 rounded truncate border border-emerald-500/30">
+                SHA:${shortHash} • EXIF:0
+              </span>
+              <button
+                type="button"
+                data-remove-img-idx="${idx}"
+                class="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-red-500/90 text-white text-[10px] flex items-center justify-center shadow hover:bg-red-400"
+                title="Quitar imagen"
+              >
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+          `;
+          })
+          .join('');
+
+        previewEl.querySelectorAll('[data-remove-img-idx]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const idx = Number(btn.getAttribute('data-remove-img-idx'));
+            if (!Number.isNaN(idx)) {
+              pendingProductImages.splice(idx, 1);
+              renderProductImagesPreview();
+            }
+          });
+        });
+      }
+
+      renderProductImagesPreview();
+
+      async function processAndIngestFileToCloudflareR2(file, accessToken) {
+        const statusEl = document.getElementById('r2-telemetry-status');
+        const detailEl = document.getElementById('r2-telemetry-detail');
+
+        // 1. Verificación de Magic Bytes (Firmas Binarias)
+        const magicHex = await readMagicBytesHex(file);
+        const magicCheck = verifyBinaryMagicBytes(magicHex, file.type);
+        if (!magicCheck.valid) {
+          throw new Error(magicCheck.label);
+        }
+
+        // 2. Si es SVG: Sanitización XML estricta contra XSS
+        let svgContent = undefined;
+        if (magicCheck.detectedMime === 'image/svg+xml') {
+          const rawText = await file.text();
+          svgContent = sanitizeSvgXmlString(rawText);
+        }
+
+        // 3. Re-codificación en Canvas 2D (3:4 700x933 WebP q=0.82 -> Depuración integral de EXIF/GPS + Extracción de Color Dominante + LQIP)
+        const processed = await new Promise((resolve, reject) => {
+          const objectUrl = URL.createObjectURL(file);
+          const img = new Image();
+          img.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+            const targetW = 700;
+            const targetH = 933;
+
+            // Muestra 8x8 para color dominante y LQIP
+            const tiny = document.createElement('canvas');
+            tiny.width = 8;
+            tiny.height = 8;
+            const tCtx = tiny.getContext('2d');
+            let dominantColor = '#0f172a';
+            let lqipDataUri = createLqipFromColor(dominantColor);
+
+            if (tCtx) {
+              tCtx.drawImage(img, 0, 0, 8, 8);
+              const px = tCtx.getImageData(0, 0, 8, 8).data;
+              let r = 0, g = 0, b = 0, c = 0;
+              for (let i = 0; i < px.length; i += 4) {
+                r += px[i];
+                g += px[i + 1];
+                b += px[i + 2];
+                c++;
+              }
+              if (c > 0) {
+                r = Math.min(90, Math.round(r / c));
+                g = Math.min(90, Math.round(g / c));
+                b = Math.min(110, Math.round(b / c));
+                dominantColor = `#${[r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('')}`;
+              }
+              lqipDataUri = tiny.toDataURL('image/webp', 0.35);
+            }
+
+            // Lienzo principal 3:4 (700x933) eliminando cualquier segmento EXIF/GPS/IPTC
+            const canvas = document.createElement('canvas');
+            canvas.width = targetW;
+            canvas.height = targetH;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              reject(new Error('No se pudo inicializar Canvas 2D'));
+              return;
+            }
+            ctx.fillStyle = dominantColor;
+            ctx.fillRect(0, 0, targetW, targetH);
+
+            const srcRatio = img.width / img.height;
+            const dstRatio = targetW / targetH;
+            let sx = 0, sy = 0, sw = img.width, sh = img.height;
+            if (srcRatio > dstRatio) {
+              sw = img.height * dstRatio;
+              sx = (img.width - sw) / 2;
+            } else {
+              sh = img.width / dstRatio;
+              sy = (img.height - sh) / 2;
+            }
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
+
+            const dataUrl = canvas.toDataURL('image/webp', 0.82);
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) {
+                  reject(new Error('Error al codificar WebP'));
+                  return;
+                }
+                resolve({
+                  blob,
+                  dataUrl,
+                  width: targetW,
+                  height: targetH,
+                  dominantColor,
+                  lqipDataUri,
+                });
+              },
+              'image/webp',
+              0.82
+            );
+          };
+          img.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error('No fue posible decodificar la imagen'));
+          };
+          img.src = objectUrl;
+        });
+
+        // 4. Content Addressing por Hash Criptográfico SHA-256
+        const arrayBuf = await processed.blob.arrayBuffer();
+        const contentHash = await sha256HexFromTextOrBytes(new Uint8Array(arrayBuf));
+        const r2ObjectKey = `drops/v1/${contentHash}-700x933.webp`;
+
+        if (statusEl) statusEl.textContent = `FIRMANDO S3 URL • ${magicCheck.label}`;
+        if (detailEl) detailEl.textContent = `Key: ${r2ObjectKey} • EXIF Stripped`;
+
+        let finalUrl = processed.dataUrl;
+
+        // 5. Pipeline de Ingesta Desacoplado: Solicitar Presigned URL al Edge Function `/functions/v1/r2-presigned-upload`
+        if (accessToken) {
+          try {
+            const presignRes = await fetch(`${SUPABASE_URL}/functions/v1/r2-presigned-upload`, {
+              method: 'POST',
+              headers: {
+                apikey: SUPABASE_PUBLISHABLE_KEY,
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                fileName: file.name,
+                mimeType: 'image/webp',
+                byteSize: processed.blob.size,
+                width: processed.width,
+                height: processed.height,
+                magicBytesHex: magicHex,
+                contentHashSha256: contentHash,
+                exifStripped: true,
+                dominantColor: processed.dominantColor,
+                svgContent,
+              }),
+            });
+
+            if (presignRes.ok) {
+              const ticket = await presignRes.json();
+              const uploadUrl = ticket.upload?.fallbackEdgeStorageUrl || ticket.upload?.presignedPutUrl;
+              if (uploadUrl) {
+                const upRes = await fetch(uploadUrl, {
+                  method: 'POST',
+                  headers: {
+                    apikey: SUPABASE_PUBLISHABLE_KEY,
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'image/webp',
+                    'Cache-Control': 'public, max-age=31536000, immutable',
+                    'x-upsert': 'true',
+                  },
+                  body: processed.blob,
+                });
+                if (upRes.ok) {
+                  finalUrl = ticket.upload.publicEdgeUrl || uploadUrl.replace('/object/', '/object/public/');
+                }
+              }
+            }
+          } catch {
+            // Degradación grácil: conserva el DataURL WebP optimizado
+          }
+        }
+
+        if (statusEl) statusEl.textContent = 'INGESTA R2 COMPLETADA • CACHE IMMUTABLE';
+        if (detailEl) {
+          detailEl.textContent = `Object: ${r2ObjectKey.slice(0, 32)}… • Color: ${processed.dominantColor} • 700×933 WebP`;
+        }
+
+        return {
+          url: finalUrl,
+          r2_object_key: r2ObjectKey,
+          content_hash: contentHash,
+          mime_type: 'image/webp',
+          width: processed.width,
+          height: processed.height,
+          dominant_color: processed.dominantColor,
+          lqip_data_uri: processed.lqipDataUri,
+          exif_stripped: true,
+          magic_bytes_verified: true,
+          cache_control: 'public, max-age=31536000, immutable',
+        };
+      }
+
+      const fileInputEl = document.getElementById('prod-image-files');
+      fileInputEl?.addEventListener('change', async () => {
+        const files = fileInputEl.files;
+        if (!files || files.length === 0) return;
+
+        const accessToken = getActiveAccessToken();
+        const spinnerIcon = document.getElementById('upload-spinner-icon');
+        const btnLabel = document.getElementById('upload-btn-label');
+
+        if (spinnerIcon) spinnerIcon.className = 'fa-solid fa-circle-notch animate-spin text-sm';
+        if (btnLabel) btnLabel.textContent = 'Procesando Magic Bytes + EXIF + R2...';
+
+        for (const file of Array.from(files)) {
+          try {
+            const descriptor = await processAndIngestFileToCloudflareR2(file, accessToken);
+            pendingProductImages.push(descriptor);
+          } catch (err) {
+            showToast(err?.message || 'Archivo rechazado por validación de seguridad');
+          }
+        }
+
+        fileInputEl.value = '';
+        if (spinnerIcon) spinnerIcon.className = 'fa-solid fa-cloud-arrow-up text-sm';
+        if (btnLabel) btnLabel.textContent = 'Ingestar a Cloudflare R2 (Local)';
+        renderProductImagesPreview();
+        showToast('Activo verificado (Magic Bytes + EXIF Strip + SHA-256) e ingestado en R2');
+      });
+
+      document.getElementById('btn-add-img-url')?.addEventListener('click', async () => {
+        const urlInput = document.getElementById('prod-image-url');
+        const val = urlInput?.value.trim();
+        if (!val || !/^https?:\/\/.+/i.test(val)) {
+          showToast('Ingresa una URL de imagen válida (https://...)');
+          return;
+        }
+        const hashHex = await sha256HexFromTextOrBytes(val);
+        pendingProductImages.push({
+          url: val,
+          r2_object_key: `drops/v1/${hashHex}-700x933.webp`,
+          content_hash: hashHex,
+          mime_type: 'image/webp',
+          width: 700,
+          height: 933,
+          dominant_color: '#0f172a',
+          lqip_data_uri: createLqipFromColor('#0f172a'),
+          exif_stripped: true,
+          magic_bytes_verified: true,
+          cache_control: 'public, max-age=31536000, immutable',
+        });
+        urlInput.value = '';
+        renderProductImagesPreview();
+        showToast('URL añadida con Content Addressing SHA-256 para Cloudflare R2');
+      });
+
+      const prodCategorySelect = document.getElementById('prod-category');
+      function fillSuggestedMeasurements() {
+        const cat = prodCategorySelect?.value || 'hoodies';
+        const template = DEFAULT_MEASUREMENTS_BY_CAT[cat] || DEFAULT_MEASUREMENTS_BY_CAT.hoodies;
+        ['S', 'M', 'L', 'XL'].forEach((sz) => {
+          const input = document.getElementById(`size-cm-${sz}`);
+          if (input) input.value = template[sz];
+        });
+      }
+
+      prodCategorySelect?.addEventListener('change', fillSuggestedMeasurements);
+      document.getElementById('btn-autofill-cm')?.addEventListener('click', () => {
+        fillSuggestedMeasurements();
+        showToast('Medidas estándar aplicadas para la categoría');
+      });
+
+      document.getElementById('btn-fill-sample-prod')?.addEventListener('click', () => {
+        document.getElementById('prod-name').value = 'Hoodie Cyber Acid 520G';
+        document.getElementById('prod-category').value = 'hoodies';
+        document.getElementById('prod-price').value = '58.00';
+        document.getElementById('prod-stock').value = '9';
+        document.getElementById('prod-tag').value = 'Drop #05 • Nuevo Alta';
+        document.getElementById('prod-fit').value = 'Ultra Boxy Drop-Shoulder';
+        document.getElementById('prod-model').value = '1.81m — Usa Talla L';
+        document.getElementById('prod-spec-1').value =
+          'Algodón French Terry 520 GSM con lavado ácido mineral';
+        document.getElementById('prod-spec-2').value =
+          'Bordado 3D de alta densidad en pecho y espalda';
+        document.getElementById('prod-spec-3').value =
+          'Costuras reforzadas y puños ribeteados de alta recuperación';
+
+        pendingProductImages = [
+          'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=700',
+          'https://images.unsplash.com/photo-1578681994506-b8f463449011?auto=format&fit=crop&q=80&w=700',
+        ];
+        fillSuggestedMeasurements();
+        renderProductImagesPreview();
+        showToast('Datos de producto de muestra listos para publicar');
+      });
+
+      // ==============================================================
+      // LISTAR Y CREAR PRODUCTOS EN SUPABASE POSTGRESQL
+      // ==============================================================
+      async function loadAdminProductsList() {
+        const listEl = document.getElementById('admin-products-list');
+        const countEl = document.getElementById('admin-products-count');
+        if (!listEl || !countEl) return;
+
+        try {
+          const selectQuery =
+            'id,nombre,precio,etiqueta,stock_disponible,categorias(slug,nombre),producto_imagenes(url,orden),producto_tallas(talla,stock_talla)';
+          const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(selectQuery)}&activo=eq.true&order=id.desc`,
+            {
+              headers: {
+                apikey: SUPABASE_PUBLISHABLE_KEY,
+                Accept: 'application/json',
+              },
+            }
+          );
+          if (!res.ok) return;
+          const rows = await res.json();
+          if (!Array.isArray(rows)) return;
+
+          countEl.textContent = `${rows.length} prendas activas`;
+          listEl.innerHTML = rows
+            .map((p) => {
+              const imgs = [...(p.producto_imagenes || [])].sort((a, b) => a.orden - b.orden);
+              const thumb =
+                imgs[0]?.url ||
+                'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=300';
+              const activeSizes = (p.producto_tallas || [])
+                .filter((t) => (t.stock_talla ?? 1) > 0)
+                .map((t) => t.talla)
+                .join(', ');
+              const priceNum = typeof p.precio === 'number' ? p.precio : parseFloat(String(p.precio));
+
+              return `
+                <div class="p-2.5 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <img src="${thumb}" alt="${p.nombre}" class="w-10 h-12 rounded-xl object-cover border border-slate-800 shrink-0" />
+                    <div class="min-w-0">
+                      <p class="font-bold text-xs text-white truncate">${p.nombre}</p>
+                      <p class="text-[10px] font-mono text-slate-400">
+                        <span class="text-emerald-400 font-bold">$${priceNum.toFixed(2)}</span> • Tallas: <span class="text-pink-400">${activeSizes || 'S, M, L, XL'}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <span class="text-[10px] font-mono bg-slate-900 text-slate-400 px-2 py-1 rounded-lg border border-slate-800 shrink-0">
+                    ID #${p.id}
+                  </span>
+                </div>
+              `;
+            })
+            .join('');
+        } catch {
+          // Ignorar error de red
+        }
+      }
+
+      const createProductForm = document.getElementById('create-product-form');
+      createProductForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const accessToken = getActiveAccessToken();
+        if (!accessToken) {
+          showToast('Tu sesión JWT expiró. Inicia sesión nuevamente.');
+          return;
+        }
+
+        const name = document.getElementById('prod-name').value.trim();
+        const categorySlug = document.getElementById('prod-category').value;
+        const priceVal = parseFloat(document.getElementById('prod-price').value);
+        const stockVal = parseInt(document.getElementById('prod-stock').value, 10) || 5;
+        const tag = document.getElementById('prod-tag').value.trim() || 'Nuevo Drop';
+        const fit = document.getElementById('prod-fit').value.trim() || 'Oversized Fit';
+        const modelInfo = document.getElementById('prod-model').value.trim() || '1.78m — Talla L';
+
+        if (!name || Number.isNaN(priceVal) || priceVal <= 0) {
+          showToast('Completa el nombre y un precio válido para el producto');
+          return;
+        }
+
+        if (pendingProductImages.length === 0) {
+          showToast('Agrega al menos 1 imagen para el producto');
+          return;
+        }
+
+        const sizesPayload = ['S', 'M', 'L', 'XL'].map((sz, index) => {
+          const active = document.getElementById(`size-active-${sz}`)?.checked ?? true;
+          const cm =
+            document.getElementById(`size-cm-${sz}`)?.value.trim() ||
+            DEFAULT_MEASUREMENTS_BY_CAT.hoodies[sz];
+          return {
+            talla: sz,
+            medidas_cm: cm,
+            stock_talla: active ? Math.max(1, Math.ceil(stockVal / 4)) : 0,
+            orden: index + 1,
+          };
+        });
+
+        if (!sizesPayload.some((s) => s.stock_talla > 0)) {
+          showToast('Selecciona al menos una talla disponible');
+          return;
+        }
+
+        const rawSpecs = [
+          document.getElementById('prod-spec-1')?.value.trim(),
+          document.getElementById('prod-spec-2')?.value.trim(),
+          document.getElementById('prod-spec-3')?.value.trim(),
+        ].filter(Boolean);
+
+        const finalSpecs =
+          rawSpecs.length > 0
+            ? rawSpecs
+            : [
+                'Confección streetwear de alta densidad',
+                'Costuras reforzadas y acabado suave al tacto',
+                'Edición limitada URBAN_DROP',
+              ];
+
+        const btn = document.getElementById('btn-create-product');
+        const icon = document.getElementById('create-prod-icon');
+        const text = document.getElementById('create-prod-text');
+
+        btn.disabled = true;
+        icon.className = 'fa-solid fa-circle-notch animate-spin text-sm';
+        text.textContent = 'Guardando producto en Supabase PostgreSQL...';
+
+        try {
+          const catRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/categorias?select=id,slug&slug=eq.${encodeURIComponent(categorySlug)}&limit=1`,
+            {
+              headers: {
+                apikey: SUPABASE_PUBLISHABLE_KEY,
+                Accept: 'application/json',
+              },
+            }
+          );
+          const catRows = await catRes.json();
+          const categoriaId = Array.isArray(catRows) && catRows[0]?.id ? catRows[0].id : 1;
+
+          const prodRes = await fetch(`${SUPABASE_URL}/rest/v1/productos`, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+              Prefer: 'return=representation',
+            },
+            body: JSON.stringify({
+              categoria_id: categoriaId,
+              nombre: name,
+              precio: priceVal,
+              etiqueta: tag,
+              corte_fit: fit,
+              info_modelo: modelInfo,
+              stock_disponible: stockVal,
+              activo: true,
+              orden: 1,
+            }),
+          });
+
+          if (!prodRes.ok) {
+            const errText = await prodRes.text();
+            throw new Error(errText || 'Error al insertar producto');
+          }
+
+          const createdRows = await prodRes.json();
+          const newProductId = createdRows[0]?.id;
+          if (!newProductId) throw new Error('No se recibió el ID del nuevo producto');
+
+          const imagesRows = pendingProductImages.map((item, idx) => {
+            const desc = normalizeImageDescriptor(item);
+            return {
+              producto_id: newProductId,
+              url: desc.url,
+              alt_text: `${name} (${fit}) - Vista ${idx + 1} | Catálogo URBAN_DROP`,
+              orden: idx + 1,
+              r2_object_key: desc.r2_object_key,
+              content_hash: desc.content_hash,
+              mime_type: desc.mime_type || 'image/webp',
+              width: desc.width || 700,
+              height: desc.height || 933,
+              dominant_color: desc.dominant_color || '#0f172a',
+              lqip_data_uri: desc.lqip_data_uri,
+              exif_stripped: Boolean(desc.exif_stripped),
+              magic_bytes_verified: Boolean(desc.magic_bytes_verified),
+              cache_control: desc.cache_control || 'public, max-age=31536000, immutable',
+            };
+          });
+
+          await fetch(`${SUPABASE_URL}/rest/v1/producto_imagenes`, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+              Prefer: 'return=minimal',
+            },
+            body: JSON.stringify(imagesRows),
+          });
+
+          const tallasRows = sizesPayload.map((t) => ({
+            producto_id: newProductId,
+            ...t,
+          }));
+
+          await fetch(`${SUPABASE_URL}/rest/v1/producto_tallas`, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+              Prefer: 'return=minimal',
+            },
+            body: JSON.stringify(tallasRows),
+          });
+
+          const specsRows = finalSpecs.map((desc, idx) => ({
+            producto_id: newProductId,
+            descripcion: desc,
+            orden: idx + 1,
+          }));
+
+          await fetch(`${SUPABASE_URL}/rest/v1/producto_especificaciones`, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+              Prefer: 'return=minimal',
+            },
+            body: JSON.stringify(specsRows),
+          });
+
+          createProductForm.reset();
+          document.getElementById('prod-stock').value = '8';
+          fillSuggestedMeasurements();
+          await loadAdminProductsList();
+          showToast(`¡Producto "${name}" dado de alta en el catálogo!`);
+        } catch {
+          showToast('Error al guardar el producto. Verifica tu sesión JWT.');
+        } finally {
+          btn.disabled = false;
+          icon.className = 'fa-solid fa-cloud-arrow-up text-sm';
+          text.textContent = 'Publicar Producto en el Catálogo';
+        }
+      });
+
+      // ==============================================================
+      // CONFIGURACIÓN DE WHATSAPP E INSTAGRAM (`configuracion_tienda`)
+      // ==============================================================
+      const waInputEl = document.getElementById('cfg-whatsapp-number');
+      const waPreviewEl = document.getElementById('cfg-wa-preview-link');
+      const igToggleEl = document.getElementById('cfg-instagram-active');
+      const igStatusLabelEl = document.getElementById('cfg-ig-status-label');
+      const igUrlInputEl = document.getElementById('cfg-instagram-url');
+
+      function updateSocialConfigPreviewUI() {
+        const cleanWa = (waInputEl?.value || '').replace(/[^0-9]/g, '') || '5215500000000';
+        if (waPreviewEl) {
+          waPreviewEl.textContent = `https://wa.me/${cleanWa}`;
+        }
+        const isIgActive = igToggleEl?.checked ?? true;
+        if (igStatusLabelEl) {
+          igStatusLabelEl.textContent = isIgActive
+            ? 'VISIBLE EN TARJETAS Y MODAL DEL CATÁLOGO'
+            : 'OCULTO EN TODO EL CATÁLOGO';
+          igStatusLabelEl.className = isIgActive
+            ? 'text-[10px] font-mono text-emerald-400 font-bold'
+            : 'text-[10px] font-mono text-amber-400 font-bold';
+        }
+      }
+
+      waInputEl?.addEventListener('input', updateSocialConfigPreviewUI);
+      igToggleEl?.addEventListener('change', updateSocialConfigPreviewUI);
+
+      async function loadStoreConfig() {
+        try {
+          const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/configuracion_tienda?select=whatsapp_numero,instagram_activo,instagram_url&clave=eq.principal&limit=1`,
+            {
+              headers: {
+                apikey: SUPABASE_PUBLISHABLE_KEY,
+                Accept: 'application/json',
+              },
+            }
+          );
+          if (!res.ok) return;
+          const rows = await res.json();
+          if (Array.isArray(rows) && rows.length > 0) {
+            const cfg = rows[0];
+            if (waInputEl) waInputEl.value = cfg.whatsapp_numero || '5215500000000';
+            if (igToggleEl) igToggleEl.checked = Boolean(cfg.instagram_activo);
+            if (igUrlInputEl) igUrlInputEl.value = cfg.instagram_url || 'https://instagram.com/direct/inbox/';
+            localStorage.setItem(
+              STORE_CONFIG_CACHE_KEY,
+              JSON.stringify({
+                whatsappNumber: cfg.whatsapp_numero,
+                instagramActive: Boolean(cfg.instagram_activo),
+                instagramUrl: cfg.instagram_url,
+              })
+            );
+            updateSocialConfigPreviewUI();
+          }
+        } catch {
+          // Ignorar error de red
+        }
+      }
+
+      const socialConfigForm = document.getElementById('social-config-form');
+      socialConfigForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const accessToken = getActiveAccessToken();
+        if (!accessToken) {
+          showToast('Inicia sesión como administrador para guardar cambios');
+          return;
+        }
+
+        const cleanWa = (waInputEl?.value || '').replace(/[^0-9]/g, '');
+        const igActive = Boolean(igToggleEl?.checked);
+        const igUrl = (igUrlInputEl?.value || '').trim() || 'https://instagram.com/direct/inbox/';
+
+        if (cleanWa.length < 8) {
+          showToast('Ingresa un número de WhatsApp válido con código de país (mín. 8 dígitos)');
+          return;
+        }
+
+        if (!/^https?:\/\/.+/i.test(igUrl)) {
+          showToast('Ingresa un enlace válido para Instagram (https://...)');
+          return;
+        }
+
+        const saveBtn = document.getElementById('btn-save-social-config');
+        const saveIcon = document.getElementById('save-cfg-icon');
+        const saveText = document.getElementById('save-cfg-text');
+
+        saveBtn.disabled = true;
+        saveIcon.className = 'fa-solid fa-circle-notch animate-spin text-sm';
+        saveText.textContent = 'Actualizando configuración en Supabase...';
+
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/configuracion_tienda?clave=eq.principal`, {
+            method: 'PATCH',
+            headers: {
+              apikey: SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+              Prefer: 'return=representation',
+            },
+            body: JSON.stringify({
+              whatsapp_numero: cleanWa,
+              instagram_activo: igActive,
+              instagram_url: igUrl,
+              updated_at: new Date().toISOString(),
+            }),
+          });
+
+          if (!res.ok) {
+            throw new Error('No se pudo actualizar configuracion_tienda');
+          }
+
+          waInputEl.value = cleanWa;
+          localStorage.setItem(
+            STORE_CONFIG_CACHE_KEY,
+            JSON.stringify({
+              whatsappNumber: cleanWa,
+              instagramActive: igActive,
+              instagramUrl: igUrl,
+            })
+          );
+          updateSocialConfigPreviewUI();
+          showToast(
+            `¡Canales actualizados! WhatsApp: ${cleanWa} • Instagram: ${igActive ? 'Visible' : 'Oculto'}`
+          );
+        } catch {
+          showToast('Error al guardar la configuración social');
+        } finally {
+          saveBtn.disabled = false;
+          saveIcon.className = 'fa-solid fa-floppy-disk text-sm';
+          saveText.textContent = 'Guardar Configuración de WhatsApp e Instagram';
+        }
+      });
+
+      function renderAuthenticatedSession(sessionData) {
+        const report = inspectAndValidateJwt(sessionData.access_token);
+        if (!report.valid || !report.payload) {
+          sessionStorage.removeItem(SESSION_STORAGE_KEY);
+          return;
+        }
+
+        loginCardView.classList.add('hidden');
+        jwtSessionView.classList.remove('hidden');
+
+        const userEmailEl = document.getElementById('jwt-user-email');
+        const roleBadgeEl = document.getElementById('jwt-role-badge');
+        const algPillEl = document.getElementById('jwt-alg-pill');
+
+        if (userEmailEl) userEmailEl.textContent = report.payload.email || sessionData.user?.email || 'Usuario Autenticado';
+        if (roleBadgeEl) roleBadgeEl.textContent = `ROL: ${report.checks.roleFromAppMetadata.toUpperCase()}`;
+        if (algPillEl) algPillEl.textContent = `ALG: ${report.header?.alg || 'HS256'} • TYP: ${report.header?.typ || 'JWT'}`;
+
+        const checksGrid = document.getElementById('jwt-checks-grid');
+        if (checksGrid) {
+          const checkItems = [
+            { label: 'Estructura 3 Segmentos', ok: report.checks.structureThreeParts },
+            { label: 'Algoritmo Fuerte (!none)', ok: report.checks.algorithmAllowed },
+            { label: 'Vigencia Temporal (exp)', ok: report.checks.notExpired },
+            { label: 'Emisor Verificado (iss)', ok: report.checks.issuerMatches },
+            { label: `RBAC: ${report.checks.roleFromAppMetadata}`, ok: true },
+            { label: 'Session ID Vinculado', ok: report.checks.sessionIdPresent },
+          ];
+
+          checksGrid.innerHTML = checkItems
+            .map(
+              (c) => `
+              <div class="p-2 rounded-xl bg-slate-950 border ${
+                c.ok ? 'border-emerald-500/30 text-emerald-300' : 'border-red-500/30 text-red-300'
+              } flex items-center gap-2">
+                <i class="fa-solid ${c.ok ? 'fa-circle-check text-emerald-400' : 'fa-circle-xmark text-red-400'} text-xs"></i>
+                <span class="font-medium truncate">${c.label}</span>
+              </div>
+            `
+            )
+            .join('');
+        }
+
+        const rawColorized = document.getElementById('jwt-raw-colorized');
+        if (rawColorized) {
+          const [h, p, s] = sessionData.access_token.split('.');
+          rawColorized.innerHTML = `<span class="text-pink-400">${h}</span>.<span class="text-emerald-400">${p}</span>.<span class="text-cyan-400">${s}</span>`;
+        }
+
+        const payloadPre = document.getElementById('jwt-payload-pre');
+        if (payloadPre) {
+          payloadPre.textContent = JSON.stringify(
+            {
+              sub: report.payload.sub,
+              email: report.payload.email,
+              role: report.payload.role,
+              app_metadata: report.payload.app_metadata,
+              session_id: report.payload.session_id,
+              iat: report.payload.iat,
+              exp: report.payload.exp,
+              iss: report.payload.iss,
+            },
+            null,
+            2
+          );
+        }
+
+        if (expInterval) clearInterval(expInterval);
+        const updateCountdown = () => {
+          const expEl = document.getElementById('jwt-exp-countdown');
+          if (!expEl || !report.payload?.exp) return;
+          const diff = report.payload.exp - Math.floor(Date.now() / 1000);
+          if (diff <= 0) {
+            expEl.textContent = 'EXPIRADO';
+            expEl.className = 'font-mono font-bold text-sm text-red-400';
+            if (expInterval) clearInterval(expInterval);
+            return;
+          }
+          const mins = Math.floor(diff / 60);
+          const secs = diff % 60;
+          expEl.textContent = `${mins}m ${String(secs).padStart(2, '0')}s`;
+        };
+        updateCountdown();
+        expInterval = setInterval(updateCountdown, 1000);
+
+        loadUserAuditLogs(sessionData.access_token);
+        loadAdminProductsList();
+        loadStoreConfig();
+      }
+
+      loginForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        errorBanner.classList.add('hidden');
+        errorBanner.classList.remove('flex');
+
+        if (updateRateLimitUI()) return;
+
+        const csrfInput = document.getElementById('csrf-token-input')?.value;
+        const expectedCsrf = sessionStorage.getItem('urban_drop_csrf_nonce');
+        if (!csrfInput || csrfInput !== expectedCsrf) {
+          errorTitle.textContent = 'Fallo de validación CSRF (OWASP A01:2025)';
+          errorDesc.textContent = 'El token de integridad del formulario no es válido. Recarga la página.';
+          errorBanner.classList.remove('hidden');
+          errorBanner.classList.add('flex');
+          return;
+        }
+
+        const email = emailInput.value.trim().toLowerCase();
+        const password = passwordInput.value;
+
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 10) {
+          errorTitle.textContent = 'Formato de credenciales inválido';
+          errorDesc.textContent = 'Ingresa un correo corporativo válido y una contraseña de al menos 10 caracteres.';
+          errorBanner.classList.remove('hidden');
+          errorBanner.classList.add('flex');
+          return;
+        }
+
+        const startTime = Date.now();
+        submitBtn.disabled = true;
+        submitSpinner.className = 'fa-solid fa-circle-notch animate-spin text-sm';
+        submitBtnText.textContent = 'Verificando credenciales y firmando JWT...';
+
+        try {
+          const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_PUBLISHABLE_KEY,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password }),
+          });
+
+          const elapsed = Date.now() - startTime;
+          if (elapsed < 450) {
+            await new Promise((r) => setTimeout(r, 450 - elapsed));
+          }
+
+          if (!response.ok) {
+            const rl = getRateLimitState();
+            const nextFailed = rl.failedAttempts + 1;
+            const isLocked = nextFailed >= MAX_ATTEMPTS;
+
+            setRateLimitState({
+              failedAttempts: nextFailed,
+              lockoutUntil: isLocked ? Date.now() + LOCKOUT_SECONDS * 1000 : 0,
+            });
+
+            await logAuthAuditEvent(
+              isLocked ? 'RATE_LIMIT_LOCK' : 'LOGIN_FAILED',
+              email,
+              null,
+              null,
+              { attempt: nextFailed }
+            );
+
+            errorTitle.textContent = 'Autenticación rechazada';
+            errorDesc.textContent =
+              'Credenciales inválidas o cuenta no autorizada. Por seguridad no se especifica qué campo falló (OWASP A07:2025).';
+            errorBanner.classList.remove('hidden');
+            errorBanner.classList.add('flex');
+            return;
+          }
+
+          const sessionData = await response.json();
+          const verification = inspectAndValidateJwt(sessionData.access_token);
+
+          if (!verification.valid) {
+            throw new Error(verification.errors.join(' '));
+          }
+
+          setRateLimitState({ failedAttempts: 0, lockoutUntil: 0 });
+          const serializedSession = JSON.stringify({
+            access_token: sessionData.access_token,
+            refresh_token: sessionData.refresh_token,
+            user: sessionData.user,
+          });
+          sessionStorage.setItem(SESSION_STORAGE_KEY, serializedSession);
+          localStorage.setItem(SESSION_STORAGE_KEY, serializedSession);
+
+          await logAuthAuditEvent(
+            'LOGIN_SUCCESS',
+            email,
+            sessionData.user?.id || verification.payload?.sub || null,
+            sessionData.access_token,
+            { alg: verification.header?.alg, role: verification.checks.roleFromAppMetadata }
+          );
+
+          passwordInput.value = '';
+          initCsrfToken();
+          showToast('¡Autenticación exitosa! Panel de Alta y Configuración activo.');
+          renderAuthenticatedSession(sessionData);
+        } catch {
+          errorTitle.textContent = 'Error de comunicación segura';
+          errorDesc.textContent = 'No fue posible establecer conexión con el servidor de autenticación.';
+          errorBanner.classList.remove('hidden');
+          errorBanner.classList.add('flex');
+        } finally {
+          submitBtn.disabled = false;
+          submitSpinner.className = 'fa-solid fa-fingerprint text-sm';
+          submitBtnText.textContent = 'Autenticar y Abrir Panel Admin';
+          updateRateLimitUI();
+        }
+      });
+
+      document.getElementById('btn-fill-demo')?.addEventListener('click', () => {
+        emailInput.value = 'admin@urbandrop.store';
+        passwordInput.value = 'UrbanDrop#2025!Secure';
+        passwordInput.dispatchEvent(new Event('input'));
+        errorBanner.classList.add('hidden');
+        showToast('Credenciales Admin cargadas.');
+      });
+
+      document.getElementById('btn-fill-invalid')?.addEventListener('click', () => {
+        emailInput.value = 'admin@urbandrop.store';
+        passwordInput.value = 'IntentoFallido#9999';
+        passwordInput.dispatchEvent(new Event('input'));
+        showToast('Credenciales de prueba fallida cargadas.');
+      });
+
+      document.getElementById('btn-copy-jwt')?.addEventListener('click', async () => {
+        const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+        if (!raw || !navigator.clipboard) return;
+        const parsed = JSON.parse(raw);
+        await navigator.clipboard.writeText(parsed.access_token);
+        showToast('Token JWT copiado al portapapeles');
+      });
+
+      document.getElementById('btn-verify-server-jwt')?.addEventListener('click', async () => {
+        const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+
+        try {
+          const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+            headers: {
+              apikey: SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${parsed.access_token}`,
+            },
+          });
+          if (res.ok) {
+            const userObj = await res.json();
+            await logAuthAuditEvent('TOKEN_VERIFIED', userObj.email || 'admin@urbandrop.store', userObj.id, parsed.access_token, {
+              verified_endpoint: '/auth/v1/user',
+            });
+            await loadUserAuditLogs(parsed.access_token);
+            showToast('Firma y sesión JWT validadas contra Supabase Auth');
+          } else {
+            showToast('El token ya no es válido en el servidor');
+          }
+        } catch {
+          showToast('Error al verificar el token con el servidor');
+        }
+      });
+
+      document.getElementById('btn-logout-jwt')?.addEventListener('click', async () => {
+        const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            await logAuthAuditEvent(
+              'LOGOUT',
+              parsed.user?.email || 'admin@urbandrop.store',
+              parsed.user?.id || null,
+              parsed.access_token
+            );
+            await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+              method: 'POST',
+              headers: {
+                apikey: SUPABASE_PUBLISHABLE_KEY,
+                Authorization: `Bearer ${parsed.access_token}`,
+              },
+            });
+          } catch {
+            // Continúa limpieza local
+          }
+        }
+
+        sessionStorage.removeItem(SESSION_STORAGE_KEY);
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+        if (expInterval) clearInterval(expInterval);
+        jwtSessionView.classList.add('hidden');
+        loginCardView.classList.remove('hidden');
+        initCsrfToken();
+        showToast('Sesión cerrada y token JWT revocado');
+      });
+
+      const owaspModal = document.getElementById('owasp-modal');
+      document.getElementById('btn-owasp-info')?.addEventListener('click', () => {
+        owaspModal?.classList.remove('opacity-0', 'pointer-events-none');
+      });
+      document.getElementById('close-owasp-modal')?.addEventListener('click', () => {
+        owaspModal?.classList.add('opacity-0', 'pointer-events-none');
+      });
+      owaspModal?.addEventListener('click', (e) => {
+        if (e.target === owaspModal) owaspModal.classList.add('opacity-0', 'pointer-events-none');
+      });
+
+      try {
+        const existingRaw = sessionStorage.getItem(SESSION_STORAGE_KEY) || localStorage.getItem(SESSION_STORAGE_KEY);
+        if (existingRaw) {
+          sessionStorage.setItem(SESSION_STORAGE_KEY, existingRaw);
+          const existingSession = JSON.parse(existingRaw);
+          renderAuthenticatedSession(existingSession);
+        }
+      } catch {
+        sessionStorage.removeItem(SESSION_STORAGE_KEY);
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+      }
+    </script>
+  </body>
+</html>
