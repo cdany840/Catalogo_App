@@ -1456,11 +1456,24 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
         for (const file of Array.from(files)) {
           try {
             if (statusEl) statusEl.textContent = 'VALIDANDO MAGIC BYTES + EXIF STRIP...';
-            const descriptor = await uploadAssetViaR2PresignedPipeline(file, accessToken);
-            pendingProductImages.push(descriptor);
+            const uploaded = await uploadAssetViaR2PresignedPipeline(file, accessToken || '');
+            const imageDesc: R2PendingImageDescriptor = {
+              url: uploaded.finalUrl,
+              r2_object_key: uploaded.objectKey,
+              content_hash: uploaded.sha256,
+              mime_type: 'image/webp',
+              width: uploaded.width,
+              height: uploaded.height,
+              dominant_color: uploaded.dominantColor,
+              lqip_data_uri: uploaded.lqipDataUri,
+              exif_stripped: true,
+              magic_bytes_verified: true,
+              cache_control: 'public, max-age=31536000, immutable',
+            };
+            pendingProductImages.push(imageDesc);
             if (statusEl) statusEl.textContent = 'INGESTA R2 COMPLETADA • CACHE IMMUTABLE';
             if (detailEl) {
-              detailEl.textContent = `Object: ${descriptor.r2_object_key.slice(0, 32)}… • Color: ${descriptor.dominant_color} • 700×933 WebP`;
+              detailEl.textContent = `Object: ${uploaded.objectKey.slice(0, 32)}… • Color: ${uploaded.dominantColor} • 700×933 WebP`;
             }
           } catch (err: any) {
             showToast(err?.message || 'Archivo rechazado por validación de seguridad');

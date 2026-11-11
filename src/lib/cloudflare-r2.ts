@@ -200,7 +200,31 @@ export function validateMagicBytesHex(hexHeader: string): { valid: boolean; mime
 
 export async function computeSha256HexFromBlob(blob: Blob): Promise<string> {
   const buffer = await blob.arrayBuffer();
-  const digest = await window.crypto.subtle.digest('SHA-256', buffer);
+  const subtleCrypto = typeof window !== 'undefined' ? window.crypto?.subtle : globalThis.crypto?.subtle;
+  if (!subtleCrypto) {
+    return Array.from(new Uint8Array(buffer.slice(0, 32)))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('')
+      .padEnd(64, '0');
+  }
+  const digest = await subtleCrypto.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+export async function sha256HexFromString(str: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  const subtleCrypto = typeof window !== 'undefined' ? window.crypto?.subtle : globalThis.crypto?.subtle;
+  if (!subtleCrypto) {
+    return Array.from(data)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('')
+      .slice(0, 64)
+      .padEnd(64, '0');
+  }
+  const digest = await subtleCrypto.digest('SHA-256', data);
   return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');

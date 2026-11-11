@@ -2,7 +2,7 @@
 // MÓDULO DE AUTENTICACIÓN JWT & SEGURIDAD OWASP TOP 10 (2025) — URBAN_DROP
 // =============================================================================
 
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase';
+import { SUPABASE_URL } from './supabase';
 
 export interface DecodedJwtHeader {
   alg: string;
