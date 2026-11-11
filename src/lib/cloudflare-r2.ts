@@ -115,13 +115,19 @@ export function buildEdgeTransformUrl(
       return parsed.toString();
     }
 
-    // 2. Si es un dominio personalizado de Cloudflare R2 con Cloudflare Image Transformations (/cdn-cgi/image/...)
-    if (parsed.hostname.includes('urbandrop.store') || parsed.hostname.includes('r2.dev')) {
+    // 2. Si es un dominio personalizado en Cloudflare Zone con Image Transformations (/cdn-cgi/image/...)
+    if (parsed.hostname.includes('urbandrop.store')) {
       const cleanPath = parsed.pathname.replace(/^\/cdn-cgi\/image\/[^/]+/, '');
       return `${parsed.origin}/cdn-cgi/image/format=${format},quality=${quality},width=${width},fit=cover${cleanPath}`;
     }
 
-    // 3. Bucket de almacenamiento con parámetros de versión/ancho
+    // 3. Subdominio gratuito de desarrollo R2 (r2.dev): servir el archivo WebP directamente sin /cdn-cgi/image/
+    if (parsed.hostname.endsWith('.r2.dev')) {
+      const cleanPath = parsed.pathname.replace(/^\/cdn-cgi\/image\/[^/]+/, '');
+      return `${parsed.origin}${cleanPath}`;
+    }
+
+    // 4. Bucket de almacenamiento con parámetros de versión/ancho
     return rawUrl;
   } catch {
     return rawUrl;
