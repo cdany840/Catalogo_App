@@ -1,0 +1,3212 @@
+---
+// =============================================================================
+// FRONTMATTER DE ASTRO (Se ejecuta en el servidor / build time)
+// Conectado a Supabase PostgreSQL (5 tablas relacionales con RLS)
+// =============================================================================
+
+import { categories, sizes } from '../data/products';
+import { fetchCatalogFromSupabase } from '../lib/supabase';
+import {
+  buildEdgeResponsiveSources,
+  createLqipSvgDataUri,
+  INTRINSIC_WIDTH,
+  INTRINSIC_HEIGHT,
+} from '../lib/cloudflare-r2';
+
+// Obtiene el catálogo en el servidor directamente desde Supabase PostgreSQL
+const { products } = await fetchCatalogFromSupabase();
+const lcpCandidateSources = buildEdgeResponsiveSources(products[0]?.images[0] || '');
+
+const categoryCounts: Record<string, number> = {
+  todos: products.length,
+  hoodies: products.filter((p) => p.category === 'hoodies').length,
+  pantalones: products.filter((p) => p.category === 'pantalones').length,
+  't-shirts': products.filter((p) => p.category === 't-shirts').length,
+  chaquetas: products.filter((p) => p.category === 'chaquetas').length,
+};
+
+// Metadatos de la página
+const pageTitle = "URBAN_DROP — Catálogo Social Streetwear";
+const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz tu pedido directo por WhatsApp o Instagram.";
+---
+
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth bg-slate-950 text-slate-100">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={pageDescription} />
+    <meta name="theme-color" content="#020617" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{pageTitle}</title>
+
+    <!-- Google Fonts & Edge Image CDN Preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
+
+    <!-- Critical Path LCP Preload (Negociación AVIF + Descriptores DPR + fetchpriority="high") -->
+    <link
+      id="lcp-preload-link"
+      rel="preload"
+      as="image"
+      type="image/avif"
+      href={lcpCandidateSources.fallbackSrc}
+      imagesrcset={lcpCandidateSources.avifSrcset}
+      imagesizes={lcpCandidateSources.sizes}
+      fetchpriority="high"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Iconografía Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+      integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+  </head>
+
+  <body class="min-h-screen pb-28 select-none bg-slate-950 antialiased font-sans text-slate-100">
+    <!-- ========================================== -->
+    <!-- TOAST DE NOTIFICACIONES RÁPIDAS            -->
+    <!-- ========================================== -->
+    <div
+      id="toast-notification"
+      class="fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-2xl bg-slate-900/95 border border-emerald-500/40 text-emerald-400 text-xs font-bold shadow-2xl backdrop-blur-md flex items-center gap-2 opacity-0 pointer-events-none -translate-y-3 transition-all duration-300"
+      role="status"
+      aria-live="polite"
+    >
+      <i id="toast-icon" class="fa-solid fa-circle-check text-sm" aria-hidden="true"></i>
+      <span id="toast-message">Acción completada</span>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- HEADER STICKY (Accesibilidad y Jerarquía)  -->
+    <!-- ========================================== -->
+    <header class="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-md border-b border-slate-800/80 px-4 py-3">
+      <div class="max-w-md mx-auto flex items-center justify-between">
+        <!-- Brand Identifier -->
+        <a href="#" class="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 rounded-lg">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-pink-500 via-purple-500 to-emerald-400 p-[2px]">
+            <div class="w-full h-full bg-slate-950 rounded-full flex items-center justify-center">
+              <i class="fa-solid fa-fire text-xs text-pink-500" aria-hidden="true"></i>
+            </div>
+          </div>
+          <div>
+            <span class="font-heading text-lg font-bold tracking-tight text-white block leading-none">URBAN_DROP</span>
+            <span class="text-[9px] font-mono text-slate-400 tracking-widest uppercase">Drop #04 • Streetwear</span>
+          </div>
+        </a>
+
+        <!-- Estado en tiempo real del catálogo y utilidades -->
+        <div class="flex items-center gap-1.5">
+          <!-- Botón Telemetría Cloudflare R2 & Edge Image Pipeline (Solo Admin) -->
+          <button
+            id="btn-r2-pipeline-modal"
+            data-admin-only="flex"
+            type="button"
+            class="hidden px-2 py-1 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 items-center gap-1 text-[10px] font-mono font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+            aria-label="Ver arquitectura de imágenes Cloudflare R2, AVIF/WebP, LCP y Seguridad"
+            title="Cloudflare R2 Edge Media Pipeline (AVIF/WebP • DPR • CLS=0 • Presigned S3)"
+          >
+            <i class="fa-solid fa-cloud-bolt text-[10px] text-amber-400" aria-hidden="true"></i>
+            <span id="r2-header-pill-text">R2•AVIF</span>
+          </button>
+
+          <!-- Botón Bolsa / Selección Guardada -->
+          <button
+            id="btn-saved-bag"
+            type="button"
+            class="relative w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center text-xs hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+            aria-label="Ver prendas guardadas para pedido múltiple"
+          >
+            <i class="fa-solid fa-bag-shopping text-pink-400" aria-hidden="true"></i>
+            <span
+              id="saved-bag-badge"
+              class="hidden absolute -top-1 -right-1 w-4 h-4 rounded-full bg-pink-500 text-white text-[9px] font-bold items-center justify-center shadow"
+            >
+              0
+            </span>
+          </button>
+
+          <!-- Botón Consultoría UX (Solo Admin) -->
+          <button
+            id="btn-info-modal"
+            data-admin-only="flex"
+            type="button"
+            class="hidden w-8 h-8 rounded-full bg-slate-800 text-slate-300 items-center justify-center text-xs hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+            aria-label="Ver Justificación UX"
+          >
+            <i class="fa-solid fa-lightbulb text-amber-400" aria-hidden="true"></i>
+          </button>
+
+          <!-- Acceso a Ruta /login (Autenticación JWT OWASP 2025) -->
+          <a
+            href="/login"
+            id="nav-login-link"
+            class="w-8 h-8 rounded-full bg-slate-800 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-xs hover:bg-emerald-500/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+            aria-label="Acceso Administrativo JWT (OWASP 2025)"
+            title="Login Seguro JWT (OWASP 2025)"
+          >
+            <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- ========================================== -->
+    <!-- BANNER EXPLICATIVO (Reducción de Fricción) -->
+    <!-- ========================================== -->
+    <section class="max-w-md mx-auto px-4 pt-4 pb-2">
+      <div class="p-3.5 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-900/90 border border-slate-800 flex items-center justify-between text-xs">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center text-sm font-bold shrink-0">
+            <i class="fa-brands fa-instagram" aria-hidden="true"></i>
+          </div>
+          <div>
+            <p class="font-bold text-slate-200">Catálogo Social Commerce</p>
+            <p class="text-[11px] text-slate-400">Toca la imagen para fotos y medidas en cm</p>
+          </div>
+        </div>
+        <div class="flex flex-col items-end gap-1 shrink-0">
+          <span class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono px-2 py-0.5 rounded-lg">
+            WhatsApp / DM
+          </span>
+          <span id="save-data-banner-indicator" class="hidden text-[9px] bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono px-1.5 py-0.5 rounded">
+            Save-Data: ON (q=52)
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- BUSCADOR RÁPIDO Y FILTRO INTELIGENTE       -->
+    <!-- ========================================== -->
+    <section class="max-w-md mx-auto px-4 pt-1 pb-1">
+      <div class="relative flex items-center">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 text-slate-500 text-xs pointer-events-none" aria-hidden="true"></i>
+        <input
+          id="catalog-search-input"
+          type="search"
+          placeholder="Buscar prenda, corte (boxy, cargo) o tela..."
+          class="w-full bg-slate-900/90 border border-slate-800 focus:border-pink-500/60 rounded-xl pl-9 pr-9 py-2.5 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all"
+          aria-label="Buscar prendas en el catálogo"
+        />
+        <button
+          id="clear-search-btn"
+          type="button"
+          class="hidden absolute right-2.5 w-6 h-6 rounded-full bg-slate-800 text-slate-400 hover:text-white items-center justify-center text-[10px]"
+          aria-label="Limpiar búsqueda"
+        >
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SELECTOR DE CATEGORÍAS (CSS Scroll Snap)   -->
+    <!-- ========================================== -->
+    <nav class="max-w-md mx-auto px-4 pt-1 pb-2 overflow-x-auto no-scrollbar snap-x snap-mandatory touch-pan-x" aria-label="Categorías de prendas">
+      <div class="flex items-center gap-2 py-1" id="category-pills">
+        {categories.map((cat, index) => (
+          <button
+            type="button"
+            data-category-id={cat.id}
+            aria-pressed={index === 0 ? "true" : "false"}
+            class:list={[
+              "cat-btn snap-start font-bold text-xs px-3.5 py-2 rounded-xl whitespace-nowrap transition-all flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500",
+              index === 0
+                ? "bg-pink-500 text-white shadow-md shadow-pink-500/20"
+                : "bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800"
+            ]}
+          >
+            <span>{cat.label}</span>
+            <span
+              class:list={[
+                "cat-count text-[10px] font-mono px-1.5 py-0.2 rounded-full",
+                index === 0 ? "bg-white/20 text-white" : "bg-slate-800 text-slate-400"
+              ]}
+            >
+              {categoryCounts[cat.id]}
+            </span>
+          </button>
+        ))}
+      </div>
+    </nav>
+
+    <!-- ========================================== -->
+    <!-- FEED DE PRODUCTOS (Cloudflare R2 + Edge)   -->
+    <!-- ========================================== -->
+    <main class="max-w-md mx-auto px-4 py-2 space-y-6" id="catalog-container">
+      {products.map((product, pIndex) => {
+        const responsiveSources = buildEdgeResponsiveSources(product.images[0]);
+        const lqipBg = createLqipSvgDataUri('#0f172a', '#1e1b4b');
+        const isLcp = pIndex === 0;
+        return (
+        <article
+          class="product-card bg-slate-900/90 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col relative transition-all duration-300"
+          data-product-id={product.id}
+          data-category={product.category}
+          data-search-text={`${product.name} ${product.tag} ${product.fit} ${product.category} ${product.specs.join(' ')}`.toLowerCase()}
+        >
+          <!-- Indicador superior de Stories (Ley de Jakob, decorativo para a11y) -->
+          <div class="absolute top-3 inset-x-3 z-20 flex gap-1.5 pointer-events-none" aria-hidden="true">
+            {product.images.map((_, imgIndex) => (
+              <div
+                class:list={[
+                  "h-1 flex-1 rounded-full transition-all duration-300",
+                  imgIndex === 0 ? "bg-white/90 shadow-sm" : "bg-white/30"
+                ]}
+                data-dot-index={imgIndex}
+              />
+            ))}
+          </div>
+
+          <!-- Caja de Imagen y Carrusel Táctil (CLS=0 aspect-ratio 3/4 + LQIP + GPU acceleration) -->
+          <div
+            class="card-carousel-area r2-gpu-layer relative aspect-[3/4] bg-slate-950 overflow-hidden group touch-pan-y cursor-pointer"
+            style={`background-color: #0f172a; background-image: url("${lqipBg}"); background-size: cover; background-position: center;`}
+            data-action="open-detail"
+            data-product-id={product.id}
+            data-dominant-color="#0f172a"
+          >
+            <!-- Negociación de Formatos AVIF / WebP + Resolución Adaptativa DPR (srcset/sizes) -->
+            <picture class="w-full h-full block" data-picture-product={product.id}>
+              <source
+                type="image/avif"
+                srcset={responsiveSources.avifSrcset}
+                sizes={responsiveSources.sizes}
+                data-source-avif={product.id}
+              />
+              <source
+                type="image/webp"
+                srcset={responsiveSources.webpSrcset}
+                sizes={responsiveSources.sizes}
+                data-source-webp={product.id}
+              />
+              <img
+                src={responsiveSources.fallbackSrc}
+                srcset={responsiveSources.webpSrcset}
+                sizes={responsiveSources.sizes}
+                width={INTRINSIC_WIDTH}
+                height={INTRINSIC_HEIGHT}
+                alt={`${product.name} — Corte ${product.fit} (${product.tag}) — Vista 1 de ${product.images.length}`}
+                loading={isLcp ? "eager" : "lazy"}
+                fetchpriority={isLcp ? "high" : "low"}
+                decoding="async"
+                class="card-img w-full h-full object-cover transition-opacity duration-200"
+                data-img-product={product.id}
+              />
+            </picture>
+
+            <!-- Gradiente sutil inferior para legibilidad WCAG AA/AAA -->
+            <div class="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent pointer-events-none" aria-hidden="true"></div>
+
+            <!-- Badge Signifier "Toca para detalles" -->
+            <button
+              type="button"
+              data-action="open-detail"
+              data-product-id={product.id}
+              class="absolute top-7 left-3 z-20 bg-slate-950/85 backdrop-blur-md text-slate-100 text-[10px] font-semibold px-2.5 py-1.5 rounded-full border border-pink-500/30 flex items-center gap-1.5 shadow-lg hover:bg-pink-500 hover:text-white transition-all pointer-events-auto focus-visible:outline-none"
+            >
+              <i class="fa-solid fa-expand text-[9px] text-pink-400" aria-hidden="true"></i>
+              <span>Toca para detalles</span>
+            </button>
+
+            <!-- Badge Telemetría Cloudflare R2 Edge Codec (Solo Admin) -->
+            <span
+              data-admin-only="inline-flex"
+              class="hidden absolute top-7 right-12 z-20 bg-slate-950/85 backdrop-blur-md text-amber-300 text-[9px] font-mono px-2 py-1 rounded-full border border-amber-500/30 items-center gap-1 pointer-events-none"
+              aria-hidden="true"
+            >
+              <i class="fa-solid fa-bolt text-[8px]"></i>
+              <span data-r2-badge-product={product.id}>{isLcp ? 'LCP•AVIF' : 'R2•AVIF'}</span>
+            </span>
+
+            <!-- Botón Guardar en Selección / Favoritos -->
+            <button
+              type="button"
+              data-action="toggle-save"
+              data-product-id={product.id}
+              class="save-product-btn absolute top-7 right-3 z-20 w-8 h-8 rounded-full bg-slate-950/85 backdrop-blur-md text-slate-200 border border-white/15 flex items-center justify-center text-xs hover:text-pink-400 active:scale-90 transition-all focus-visible:outline-none"
+              aria-label={`Guardar ${product.name} en tu selección`}
+            >
+              <i class="fa-regular fa-bookmark" aria-hidden="true" data-save-icon={product.id}></i>
+            </button>
+
+            <!-- Controles de Navegación del Carrusel -->
+            <button
+              type="button"
+              data-action="slide-prev"
+              data-product-id={product.id}
+              class="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/75 text-white backdrop-blur-md flex items-center justify-center opacity-85 hover:opacity-100 active:scale-90 transition-all z-20 focus-visible:outline-none"
+              aria-label={`Ver foto anterior de ${product.name}`}
+            >
+              <i class="fa-solid fa-chevron-left text-xs" aria-hidden="true"></i>
+            </button>
+            <button
+              type="button"
+              data-action="slide-next"
+              data-product-id={product.id}
+              class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/75 text-white backdrop-blur-md flex items-center justify-center opacity-85 hover:opacity-100 active:scale-90 transition-all z-20 focus-visible:outline-none"
+              aria-label={`Ver siguiente foto de ${product.name}`}
+            >
+              <i class="fa-solid fa-chevron-right text-xs" aria-hidden="true"></i>
+            </button>
+
+            <!-- Badge de Fit & Modelo rápido en esquina inferior izquierda (Contraste WCAG AAA) -->
+            <div class="absolute bottom-3 left-3 z-10 flex items-center gap-1.5 bg-slate-950/85 backdrop-blur-md text-slate-100 text-[10px] px-2.5 py-1 rounded-full border border-white/15 pointer-events-none">
+              <i class="fa-solid fa-ruler-horizontal text-pink-400 text-[9px]" aria-hidden="true"></i>
+              <span>{product.fit}</span>
+            </div>
+
+            <!-- Contador de diapositivas -->
+            <div class="absolute bottom-3 right-3 z-10 bg-slate-950/85 backdrop-blur-md text-slate-200 text-[10px] font-mono px-2.5 py-1 rounded-full border border-white/15">
+              <span data-counter-product={product.id}>1</span>/{product.images.length}
+            </div>
+          </div>
+
+          <!-- Información y Acciones Rápidas -->
+          <div class="p-4 flex flex-col justify-between gap-4">
+            <div class="flex items-start justify-between gap-2">
+              <div class="cursor-pointer" data-action="open-detail" data-product-id={product.id}>
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] font-bold tracking-widest text-pink-400 uppercase">{product.tag}</span>
+                  <span class="text-[10px] font-mono text-amber-400/90 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                    Quedan {product.stockLeft}
+                  </span>
+                </div>
+                <h2 class="font-heading font-bold text-lg text-white leading-tight hover:text-pink-400 transition-colors mt-0.5">
+                  {product.name}
+                </h2>
+                <p class="text-[11px] text-slate-400 mt-0.5">{product.specs[0]}</p>
+              </div>
+              <div class="text-right shrink-0">
+                <span class="text-[10px] text-slate-500 font-mono block">PRECIO</span>
+                <span class="font-heading font-bold text-xl text-emerald-400">{product.price}</span>
+              </div>
+            </div>
+
+            <!-- Selector Rápido de Talla (S, M, L, XL) -->
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Talla requerida:</span>
+                <span data-size-label={product.id} class="text-[11px] font-semibold text-pink-400">
+                  Selecciona una talla
+                </span>
+              </div>
+
+              <div class="grid grid-cols-4 gap-2">
+                {sizes.map((sz) => (
+                  <button
+                    type="button"
+                    data-action="select-size"
+                    data-product-id={product.id}
+                    data-size={sz}
+                    class="size-chip min-h-[44px] py-2.5 text-xs font-bold rounded-xl border border-slate-700 bg-slate-800/50 text-slate-200 hover:border-slate-500 active:scale-95 transition-all text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                  >
+                    {sz}
+                  </button>
+                ))}
+              </div>
+
+              <!-- Píldora reactiva de medidas en cm directamente en la tarjeta -->
+              <div
+                data-card-measurements-box={product.id}
+                class="hidden mt-2 px-3 py-1.5 rounded-xl bg-slate-950/90 border border-slate-800/90 items-center justify-between text-[11px]"
+              >
+                <span class="text-slate-400 flex items-center gap-1.5">
+                  <i class="fa-solid fa-ruler-combined text-pink-400 text-[10px]" aria-hidden="true"></i>
+                  <span>Medidas exactas:</span>
+                </span>
+                <span data-card-measurements-text={product.id} class="font-mono font-bold text-emerald-400"></span>
+              </div>
+            </div>
+
+            <!-- Botones de Conversión Social Directa y Carrito (Ley de Fitts) -->
+            <div class="pt-1 flex gap-2">
+              <button
+                type="button"
+                data-action="add-to-cart"
+                data-product-id={product.id}
+                class="min-h-[44px] py-3 px-3 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 text-pink-300 border border-pink-500/40 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                aria-label={`Agregar ${product.name} al carrito`}
+              >
+                <i class="fa-solid fa-cart-plus text-xs" aria-hidden="true" data-cart-btn-icon={product.id}></i>
+                <span data-btn-text-cart={product.id}>Agregar</span>
+              </button>
+
+              <button
+                type="button"
+                data-action="trigger-social"
+                data-product-id={product.id}
+                data-channel="whatsapp"
+                class="flex-1 min-h-[44px] py-3 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all btn-social-pulse focus-visible:outline-none"
+              >
+                <i class="fa-brands fa-whatsapp text-base" aria-hidden="true"></i>
+                <span data-btn-text-wa={product.id}>Pedir por WhatsApp</span>
+              </button>
+
+              <button
+                type="button"
+                data-action="trigger-social"
+                data-product-id={product.id}
+                data-channel="instagram"
+                class="w-12 h-11 min-h-[44px] rounded-xl bg-slate-800 hover:bg-slate-700 text-pink-400 border border-slate-700 flex items-center justify-center text-base active:scale-95 transition-all focus-visible:outline-none"
+                aria-label={`Pedir ${product.name} por mensaje directo de Instagram`}
+              >
+                <i class="fa-brands fa-instagram" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        </article>
+      )})}
+
+      <!-- Estado Vacío para Búsqueda / Filtros sin coincidencias -->
+      <div
+        id="empty-catalog-state"
+        class="hidden bg-slate-900/70 border border-slate-800 rounded-3xl p-8 text-center space-y-3"
+      >
+        <div class="w-12 h-12 rounded-2xl bg-pink-500/10 text-pink-400 flex items-center justify-center mx-auto text-lg">
+          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        </div>
+        <h3 class="font-heading font-bold text-base text-white">No encontramos esa prenda</h3>
+        <p class="text-xs text-slate-400 max-w-xs mx-auto">
+          Prueba buscando otro corte (ej. <span class="text-slate-200 font-semibold">Boxy</span>, <span class="text-slate-200 font-semibold">Cargo</span>, <span class="text-slate-200 font-semibold">Bomber</span>) o restablece las categorías.
+        </p>
+        <button
+          id="reset-filters-btn"
+          type="button"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-pink-500 hover:bg-pink-400 text-white text-xs font-bold transition-all"
+        >
+          <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+          <span>Ver todo el catálogo</span>
+        </button>
+      </div>
+    </main>
+
+    <!-- ============================================================== -->
+    <!-- BARRA FLOTANTE DEL CARRITO DE COMPRAS (Carrito Drop Social)    -->
+    <!-- ============================================================== -->
+    <div
+      id="floating-bag-bar"
+      class="fixed bottom-4 inset-x-4 max-w-md mx-auto z-30 bg-slate-900/95 backdrop-blur-xl border border-pink-500/40 rounded-2xl p-3 shadow-2xl flex items-center justify-between gap-3 translate-y-28 opacity-0 pointer-events-none transition-all duration-300"
+    >
+      <div class="flex items-center gap-2.5 cursor-pointer" id="floating-bag-info-area">
+        <div class="w-10 h-10 rounded-xl bg-pink-500/20 text-pink-400 border border-pink-500/30 flex items-center justify-center font-bold text-sm relative">
+          <i class="fa-solid fa-cart-shopping text-xs mr-0.5" aria-hidden="true"></i>
+          <span id="floating-bag-count">0</span>
+        </div>
+        <div>
+          <p class="text-xs font-bold text-white leading-tight flex items-center gap-1.5">
+            <span>Tu Carrito Drop</span>
+            <span id="floating-bag-shipping-tag" class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Ver detalle</span>
+          </p>
+          <p id="floating-bag-total" class="text-[11px] font-mono text-emerald-400">$0.00 USD en carrito</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button
+          id="open-bag-modal-btn"
+          type="button"
+          class="px-3.5 py-2.5 rounded-xl bg-pink-500 hover:bg-pink-400 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-pink-500/20 active:scale-95 transition-all"
+        >
+          <i class="fa-solid fa-bag-shopping text-xs" aria-hidden="true"></i>
+          <span>Abrir Carrito</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- MODAL VISTA DETALLADA (Product Detail Sheet - Anti Devolución) -->
+    <!-- ============================================================== -->
+    <div
+      id="product-detail-modal"
+      class="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 opacity-0 pointer-events-none transition-all duration-300 overflow-hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pdm-title"
+    >
+      <div
+        id="detail-modal-card"
+        class="bg-slate-900 border border-slate-800/90 w-full max-w-md h-[92vh] sm:h-[88vh] rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl transform translate-y-full transition-transform duration-300"
+      >
+        <!-- Handle táctil superior para móvil -->
+        <div class="w-10 h-1 bg-slate-700 rounded-full mx-auto mt-2.5 mb-0.5 sm:hidden shrink-0"></div>
+
+        <!-- Modal Top Bar -->
+        <div class="px-4 py-3 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md flex items-center justify-between shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono text-pink-400 font-semibold" id="detail-tag-header">DROP #04</span>
+            <span id="pdm-stock-badge" class="text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full">
+              Stock limitado
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              id="pdm-save-btn"
+              type="button"
+              class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center text-xs hover:bg-slate-700 transition-colors"
+              aria-label="Guardar prenda en selección"
+            >
+              <i id="pdm-save-icon" class="fa-regular fa-bookmark" aria-hidden="true"></i>
+            </button>
+            <button
+              id="pdm-share-btn"
+              type="button"
+              class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center text-xs hover:bg-slate-700 transition-colors"
+              aria-label="Compartir prenda"
+            >
+              <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
+            </button>
+            <button
+              id="pdm-close-btn"
+              type="button"
+              class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center text-xs hover:bg-slate-700 transition-colors"
+              aria-label="Cerrar modal de detalles"
+            >
+              <i class="fa-solid fa-xmark text-sm" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Scrollable Modal Body -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-5">
+          <!-- Carrusel de Alta Resolución con Indicadores (Cloudflare R2 + AVIF/WebP + DPR) -->
+          <div
+            id="pdm-gallery-container"
+            class="r2-gpu-layer relative aspect-[3/4] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 touch-pan-y select-none"
+          >
+            <div class="absolute top-3 inset-x-3 z-20 flex gap-1.5 pointer-events-none" id="pdm-dots-container" aria-hidden="true"></div>
+
+            <picture class="w-full h-full block" id="pdm-picture">
+              <source id="pdm-source-avif" type="image/avif" srcset="" sizes="(max-width: 480px) 92vw, 420px" />
+              <source id="pdm-source-webp" type="image/webp" srcset="" sizes="(max-width: 480px) 92vw, 420px" />
+              <img
+                id="pdm-image"
+                src=""
+                width="700"
+                height="933"
+                decoding="async"
+                alt="Detalle de la prenda"
+                class="w-full h-full object-cover transition-opacity duration-200"
+              />
+            </picture>
+
+            <div
+              id="pdm-r2-meta-badge-wrap"
+              data-admin-only="flex"
+              class="hidden absolute bottom-3 left-3 z-20 bg-slate-950/80 backdrop-blur-md text-amber-300 text-[9px] font-mono px-2 py-0.5 rounded-full border border-amber-500/30 items-center gap-1 pointer-events-none"
+            >
+              <i class="fa-solid fa-cloud-bolt text-[8px]" aria-hidden="true"></i>
+              <span id="pdm-r2-meta-badge">Cloudflare R2 • AVIF/WebP • EXIF Stripped</span>
+            </div>
+
+            <button
+              id="pdm-slide-prev"
+              type="button"
+              class="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/60 text-white backdrop-blur-md flex items-center justify-center active:scale-90 transition-all z-20"
+              aria-label="Ver foto previa del producto"
+            >
+              <i class="fa-solid fa-chevron-left text-xs" aria-hidden="true"></i>
+            </button>
+            <button
+              id="pdm-slide-next"
+              type="button"
+              class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/60 text-white backdrop-blur-md flex items-center justify-center active:scale-90 transition-all z-20"
+              aria-label="Ver siguiente foto del producto"
+            >
+              <i class="fa-solid fa-chevron-right text-xs" aria-hidden="true"></i>
+            </button>
+
+            <div class="absolute bottom-3 right-3 z-20 bg-slate-950/70 backdrop-blur-md text-slate-300 text-[10px] font-mono px-2 py-0.5 rounded-full border border-white/10">
+              <span id="pdm-counter">1</span>/<span id="pdm-total-counter">3</span>
+            </div>
+          </div>
+
+          <!-- Cabecera de Producto -->
+          <div class="flex items-start justify-between border-b border-slate-800/80 pb-3">
+            <div>
+              <h2 id="pdm-title" class="font-heading font-bold text-xl text-white leading-tight">Nombre Prenda</h2>
+              <span id="pdm-category-badge" class="text-[11px] font-mono text-slate-400">Categoría</span>
+            </div>
+            <div class="text-right">
+              <span class="text-[10px] text-slate-500 font-mono block">PRECIO FINAL</span>
+              <span id="pdm-price" class="font-heading font-bold text-2xl text-emerald-400">$0.00</span>
+            </div>
+          </div>
+
+          <!-- Referencia de Fit & Modelo (UX Anti-Devolución) -->
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center gap-2.5">
+              <i class="fa-solid fa-shirt text-pink-400 text-sm" aria-hidden="true"></i>
+              <div>
+                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Corte / Fit</p>
+                <p id="pdm-fit" class="font-semibold text-slate-200">Oversized Boxy</p>
+              </div>
+            </div>
+            <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center gap-2.5">
+              <i class="fa-solid fa-user-check text-emerald-400 text-sm" aria-hidden="true"></i>
+              <div>
+                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Modelo en Foto</p>
+                <p id="pdm-model-info" class="font-semibold text-slate-200">1.78m — Talla L</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Matriz de Tallas y Medidas en Centímetros -->
+          <div class="space-y-2.5">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Selecciona Talla:</span>
+              <span id="pdm-size-status" class="text-xs font-bold text-pink-400">Selecciona una talla</span>
+            </div>
+
+            <div class="grid grid-cols-4 gap-2" id="pdm-size-grid">
+              {sizes.map((sz) => (
+                <button
+                  type="button"
+                  data-detail-size={sz}
+                  class="pdm-size-btn min-h-[44px] py-2.5 text-xs font-bold rounded-xl border border-slate-700 bg-slate-800/50 text-slate-200 transition-all focus-visible:outline-none"
+                >
+                  {sz}
+                </button>
+              ))}
+            </div>
+
+            <!-- Caja de Medidas Dinámica -->
+            <div class="p-2.5 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between text-[11px]">
+              <span class="text-slate-400">
+                <i class="fa-solid fa-ruler-combined text-slate-500 mr-1.5" aria-hidden="true"></i>
+                Medidas exactas:
+              </span>
+              <span id="pdm-measurements" class="font-mono font-bold text-slate-200">Selecciona talla para ver cm</span>
+            </div>
+
+            <!-- Tabla Comparativa Completa de Tallas (S - XL) -->
+            <div class="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-1.5">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                <span>Guía completa de medidas (cm)</span>
+                <span class="text-slate-500 font-mono">Tolerancia ±1cm</span>
+              </p>
+              <div id="pdm-size-table" class="grid grid-cols-1 gap-1 text-[11px] font-mono"></div>
+            </div>
+          </div>
+
+          <!-- Lista de Especificaciones de Tejido -->
+          <div class="p-3 bg-slate-950 rounded-2xl border border-slate-800/80 space-y-2 text-xs">
+            <p class="font-bold text-slate-300 flex items-center gap-2">
+              <i class="fa-solid fa-layer-group text-purple-400" aria-hidden="true"></i>
+              <span>Material y Cuidados</span>
+            </p>
+            <ul class="text-slate-400 space-y-1 pl-5 list-disc text-[11px]" id="pdm-specs-list"></ul>
+          </div>
+
+          <!-- Escasez y Prueba Social -->
+          <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs flex items-center gap-2">
+            <i class="fa-solid fa-bolt text-amber-400 animate-pulse" aria-hidden="true"></i>
+            <span class="font-medium" id="pdm-scarcity-text">Edición limitada: pocas piezas restantes por talla.</span>
+          </div>
+        </div>
+
+        <!-- Sticky Footer con CTAs de Conversión Directa y Carrito -->
+        <div class="p-4 border-t border-slate-800 bg-slate-900/95 backdrop-blur-md shrink-0 space-y-2">
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              id="pdm-btn-add-cart"
+              type="button"
+              class="min-h-[44px] py-3 px-3 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 text-pink-300 border border-pink-500/40 font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all focus-visible:outline-none"
+            >
+              <i class="fa-solid fa-cart-plus text-sm" aria-hidden="true"></i>
+              <span id="pdm-btn-cart-text">Agregar al Carrito</span>
+            </button>
+
+            <button
+              id="pdm-btn-wa"
+              type="button"
+              class="min-h-[44px] py-3 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all btn-social-pulse focus-visible:outline-none"
+            >
+              <i class="fa-brands fa-whatsapp text-base" aria-hidden="true"></i>
+              <span id="pdm-btn-wa-text">Pedir Ahora</span>
+            </button>
+          </div>
+
+          <button
+            id="pdm-btn-ig"
+            type="button"
+            class="w-full min-h-[40px] py-2 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-pink-400 font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 active:scale-95 transition-all focus-visible:outline-none"
+          >
+            <i class="fa-brands fa-instagram text-base" aria-hidden="true"></i>
+            <span>Preguntar disponibilidad por DM</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- MODAL CONFIRMACIÓN DE REDIRECCIÓN A RED SOCIAL                 -->
+    <!-- ============================================================== -->
+    <div
+      id="social-modal"
+      class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 opacity-0 pointer-events-none transition-all duration-300"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="social-modal-title"
+    >
+      <div
+        id="social-modal-card"
+        class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl transform translate-y-10 transition-all duration-300"
+      >
+        <div class="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-4 sm:hidden"></div>
+
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-3">
+            <div id="modal-icon-bg" class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl">
+              <i id="modal-social-icon" class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+            </div>
+            <div>
+              <h3 id="social-modal-title" class="font-heading font-bold text-base text-white">Iniciando Chat...</h3>
+              <p id="social-modal-subtitle" class="text-xs text-slate-400">Mensaje pre-estructurado listo para enviar</p>
+            </div>
+          </div>
+          <button id="close-social-btn" type="button" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-sm hover:text-white" aria-label="Cerrar modal social">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <!-- Selector rápido de talla dentro del modal social (evita errores de talla) -->
+        <div id="social-size-box" class="mb-4 p-3 rounded-2xl bg-slate-950/80 border border-slate-800">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Confirma tu talla:</span>
+            <span id="social-size-measurements" class="text-[11px] font-mono text-pink-400">Selecciona una opción</span>
+          </div>
+          <div class="grid grid-cols-4 gap-2" id="social-size-grid">
+            {sizes.map((sz) => (
+              <button
+                type="button"
+                data-social-size={sz}
+                class="social-size-btn py-2 text-xs font-bold rounded-xl border border-slate-700 bg-slate-800/50 text-slate-200 transition-all"
+              >
+                {sz}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 mb-4 font-mono text-xs text-slate-300 space-y-2">
+          <div class="flex items-center justify-between">
+            <p class="text-slate-500 font-sans text-[11px]">Vista previa del mensaje generado:</p>
+            <button
+              id="copy-message-btn"
+              type="button"
+              class="text-[11px] font-sans font-semibold text-pink-400 hover:text-pink-300 flex items-center gap-1"
+            >
+              <i class="fa-regular fa-copy" aria-hidden="true"></i>
+              <span id="copy-message-label">Copiar texto</span>
+            </button>
+          </div>
+          <p class="text-emerald-400 font-sans leading-relaxed" id="social-preview-text">"..."</p>
+        </div>
+
+        <button
+          id="confirm-redirect-btn"
+          type="button"
+          class="w-full min-h-[44px] py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-emerald-500/20"
+        >
+          <span id="confirm-redirect-text">Abrir Conversación Ahora</span>
+          <i class="fa-solid fa-arrow-right text-xs" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- MODAL DEL CARRITO DE COMPRAS (Pedido Múltiple + Cantidades)    -->
+    <!-- ============================================================== -->
+    <div
+      id="saved-bag-modal"
+      class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 opacity-0 pointer-events-none transition-all duration-300"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="saved-bag-title"
+    >
+      <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-xl bg-pink-500/15 text-pink-400 border border-pink-500/30 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+            </div>
+            <div>
+              <h3 id="saved-bag-title" class="font-heading font-bold text-base text-white leading-none">Tu Carrito Drop</h3>
+              <span id="cart-items-count-pill" class="text-[10px] font-mono text-slate-400">0 prendas seleccionadas</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button
+              id="clear-cart-btn"
+              type="button"
+              class="hidden px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-300 border border-slate-700 hover:border-red-500/30 text-[10px] font-semibold items-center gap-1 transition-all"
+              title="Vaciar todo el carrito"
+            >
+              <i class="fa-solid fa-trash-can text-[9px]" aria-hidden="true"></i>
+              <span>Vaciar</span>
+            </button>
+            <button
+              id="close-bag-btn"
+              type="button"
+              class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-sm hover:text-white"
+              aria-label="Cerrar carrito de compras"
+            >
+              <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+
+        <div id="cart-free-shipping-box" class="mt-3 p-2.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
+          <div class="flex items-center justify-between text-[11px]">
+            <span id="cart-shipping-msg" class="text-slate-300 font-medium flex items-center gap-1.5">
+              <i class="fa-solid fa-truck-fast text-pink-400 text-xs" aria-hidden="true"></i>
+              <span>Envío Express GRATIS en pedidos desde $80.00</span>
+            </span>
+            <span id="cart-shipping-pct" class="font-mono text-[10px] text-emerald-400 font-bold">0%</span>
+          </div>
+          <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+            <div id="cart-shipping-progress" class="h-full bg-gradient-to-r from-pink-500 to-emerald-400 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div id="saved-bag-items" class="flex-1 overflow-y-auto py-3 space-y-2.5 text-xs"></div>
+
+        <div class="pt-3 border-t border-slate-800 space-y-2.5">
+          <div id="cart-notes-wrapper" class="hidden">
+            <input
+              id="cart-order-notes"
+              type="text"
+              placeholder="Nota opcional: Ciudad, colonia o indicación de entrega..."
+              class="w-full bg-slate-950 border border-slate-800 focus:border-pink-500/60 rounded-xl px-3 py-2 text-[11px] text-slate-200 placeholder:text-slate-500 focus:outline-none"
+            />
+          </div>
+
+          <div class="p-3 rounded-2xl bg-slate-950/90 border border-slate-800/90 space-y-1 text-xs">
+            <div class="flex items-center justify-between text-slate-400 text-[11px]">
+              <span>Subtotal prendas:</span>
+              <span id="cart-subtotal-val" class="font-mono text-slate-200">$0.00</span>
+            </div>
+            <div class="flex items-center justify-between text-slate-400 text-[11px]">
+              <span>Envío estimado:</span>
+              <span id="cart-shipping-val" class="font-mono text-slate-300">$0.00</span>
+            </div>
+            <div class="flex items-center justify-between pt-1.5 border-t border-slate-800/80">
+              <span class="font-bold text-slate-200">Total estimado:</span>
+              <span id="saved-bag-modal-total" class="font-heading font-bold text-lg text-emerald-400">$0.00</span>
+            </div>
+          </div>
+
+          <div class="flex gap-2">
+            <button
+              id="send-bag-wa-btn"
+              type="button"
+              class="flex-1 min-h-[44px] py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
+            >
+              <i class="fa-brands fa-whatsapp text-base" aria-hidden="true"></i>
+              <span>Confirmar Pedido por WhatsApp</span>
+            </button>
+            <button
+              id="send-bag-ig-btn"
+              type="button"
+              class="w-12 min-h-[44px] rounded-xl bg-slate-800 hover:bg-slate-700 text-pink-400 border border-slate-700 flex items-center justify-center text-base active:scale-95 transition-all"
+              title="Enviar Carrito por Instagram DM"
+              aria-label="Enviar Carrito por Instagram DM"
+            >
+              <i class="fa-brands fa-instagram" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- MODAL DE CONSULTORÍA UX (Buenas prácticas y Leyes aplicadas)   -->
+    <!-- ============================================================== -->
+    <div
+      id="ux-info-modal"
+      class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ux-modal-title"
+    >
+      <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[85vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-graduation-cap text-pink-400" aria-hidden="true"></i>
+            <h3 id="ux-modal-title" class="font-heading font-bold text-base text-white">Principios UX & Astro Architecture</h3>
+          </div>
+          <button id="close-ux-btn" type="button" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-sm hover:text-white" aria-label="Cerrar modal de información">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <div class="space-y-3.5 text-xs text-slate-300 leading-relaxed">
+          <div class="p-3.5 bg-slate-950 rounded-2xl border border-slate-800">
+            <p class="font-bold text-pink-400 mb-1">1. Zero-JS & Velocidad Instantánea (Astro SSG)</p>
+            <p class="text-slate-400">
+              Al compilar el catálogo como HTML estático pre-renderizado en el servidor, el usuario móvil experimenta un First Contentful Paint inmediato sin desfase de layout (<code class="text-slate-200">CLS = 0</code>) y priorización LCP (<code class="text-slate-200">loading="eager"</code> en la primera prenda).
+            </p>
+          </div>
+          <div class="p-3.5 bg-slate-950 rounded-2xl border border-slate-800">
+            <p class="font-bold text-emerald-400 mb-1">2. UX Anti-Devolución con Medidas Exactas en cm</p>
+            <p class="text-slate-400">
+              El 70% de las dudas en compras de streetwear surge del fit. Tanto las tarjetas como la vista detallada sincronizan centímetros reales de Pecho/Cintura y Largo al tocar <code class="text-slate-200">S, M, L o XL</code>, junto con la estatura y talla del modelo en foto.
+            </p>
+          </div>
+          <div class="p-3.5 bg-slate-950 rounded-2xl border border-slate-800">
+            <p class="font-bold text-cyan-400 mb-1">3. Eliminación de Fricción (Ley de Hick)</p>
+            <p class="text-slate-400">
+              El usuario no abandona el carrito en pasarelas de pago lentas; la conversión se canaliza con un mensaje autogenerado y copiado inteligente al portapapeles directo hacia WhatsApp o Instagram DM.
+            </p>
+          </div>
+          <div class="p-3.5 bg-slate-950 rounded-2xl border border-slate-800">
+            <p class="font-bold text-amber-400 mb-1">4. Ley de Jakob & Ley de Fitts (Mobile Ergonomics)</p>
+            <p class="text-slate-400">
+              Indicadores de progreso estilo Instagram Stories, soporte de gestos táctiles (<code class="text-slate-200">swipe</code> horizontal en galerías) y botones de acción con altura mínima de <code class="text-slate-200">44px</code> en la zona de alcance natural del pulgar.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- MODAL TELEMETRÍA CLOUDFLARE R2 & EDGE IMAGE PIPELINE (13 PILARES)      -->
+    <!-- ====================================================================== -->
+    <div
+      id="r2-pipeline-modal"
+      class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="r2-modal-title"
+    >
+      <div class="bg-slate-900 border border-amber-500/30 w-full max-w-lg rounded-3xl p-5 shadow-2xl max-h-[88vh] flex flex-col">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center text-sm">
+              <i class="fa-solid fa-cloud-bolt" aria-hidden="true"></i>
+            </div>
+            <div>
+              <h3 id="r2-modal-title" class="font-heading font-bold text-base text-white">Cloudflare R2 & Edge Image Pipeline</h3>
+              <p class="text-[11px] font-mono text-amber-300">Bucket: urban-drop-r2-media • S3 Presigned V4 • CLS = 0</p>
+            </div>
+          </div>
+          <button
+            id="close-r2-modal-btn"
+            type="button"
+            class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-sm hover:text-white"
+            aria-label="Cerrar modal Cloudflare R2"
+          >
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <!-- Control Interactivo Save-Data & Simulación de Resiliencia -->
+        <div class="my-3 p-3 rounded-2xl bg-slate-950 border border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div>
+            <p class="font-bold text-slate-200 flex items-center gap-1.5">
+              <i class="fa-solid fa-gauge-Simple-high text-amber-400" aria-hidden="true"></i>
+              <span>Directiva de Cliente <code class="text-amber-300">Save-Data</code> (Ahorro de Datos)</span>
+            </p>
+            <p class="text-[11px] text-slate-400" id="r2-save-data-desc">
+              Desactivado: sirviendo <code class="text-emerald-400">360w, 540w, 720w, 1080w</code> (q=80 AVIF/WebP).
+            </p>
+          </div>
+          <button
+            id="toggle-save-data-btn"
+            type="button"
+            class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-mono text-[11px] font-bold transition-all"
+          >
+            Activar Save-Data
+          </button>
+        </div>
+
+        <!-- Lista verificable de los 13 pilares técnicos -->
+        <div class="flex-1 overflow-y-auto space-y-2 pr-1 text-[11px] text-slate-300">
+          <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800">
+            <span class="font-bold text-amber-400">1. Negociación de formatos:</span>
+            <span> Despliegue de <code class="text-slate-100">&lt;picture&gt;</code> con <code class="text-emerald-400">image/avif</code> y <code class="text-emerald-400">image/webp</code> + fallback JPEG y compresión perceptual con pérdida balanceada (<code class="text-slate-200">q=80</code>).</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800">
+            <span class="font-bold text-amber-400">2. Resolución adaptativa (DPR):</span>
+            <span> Mapeo de densidad mediante descriptores <code class="text-emerald-400">360w, 540w, 720w, 1080w</code> en <code class="text-slate-100">srcset</code> y <code class="text-slate-100">sizes="(max-width: 480px) 92vw, 420px"</code>.</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800">
+            <span class="font-bold text-amber-400">3. Prevención de Layout Shifts (CLS = 0):</span>
+            <span> Reserva intrínseca con atributos <code class="text-emerald-400">width="700" height="933"</code> y CSS <code class="text-emerald-400">aspect-ratio: 3 / 4</code> + <code class="text-slate-200">contain: layout paint</code>.</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800">
+            <span class="font-bold text-amber-400">4. Priorización Critical Path (LCP):</span>
+            <span> <code class="text-emerald-400">&lt;link rel="preload" as="image" fetchpriority="high"&gt;</code> + <code class="text-slate-100">loading="eager"</code> en el candidato LCP (#1); <code class="text-slate-100">loading="lazy" fetchpriority="low"</code> below-the-fold.</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800">
+            <span class="font-bold text-amber-400">5. Decodificación asíncrona:</span>
+            <span> Directiva <code class="text-emerald-400">decoding="async"</code> en todas las imágenes para desacoplar el hilo principal.</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800">
+            <span class="font-bold text-amber-400">6. Mitigación de latencia percibida:</span>
+            <span> Inyección de placeholders ligeros (<code class="text-emerald-400">LQIP Data URI</code> + color dominante extraído <code class="text-slate-200">#0f172a</code>).</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800">
+            <span class="font-bold text-amber-400">7. Entrega distribuida y transformaciones Edge:</span>
+            <span> Transformaciones dinámicas al vuelo (<code class="text-emerald-400">/cdn-cgi/image/format=...,quality=...,width=...</code>) y negociación de formato en Edge CDN.</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800">
+            <span class="font-bold text-amber-400">8. Caché inmutable y Content Addressing:</span>
+            <span> Llaves R2 versionadas por hash SHA-256 (<code class="text-emerald-400">drops/v1/&lt;sha256&gt;-700x933.webp</code>) + <code class="text-slate-100">Cache-Control: public, max-age=31536000, immutable</code>.</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800">
+            <span class="font-bold text-amber-400">9. Pipeline de ingesta desacoplado:</span>
+            <span> Carga directa mediante <code class="text-emerald-400">S3 API Presigned URLs (AWS SigV4)</code> generadas por la Edge Function <code class="text-slate-100">/functions/v1/r2-presigned-upload</code>.</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800">
+            <span class="font-bold text-amber-400">10. Validación de seguridad en backend:</span>
+            <span> Verificación de firmas binarias (<code class="text-emerald-400">Magic Bytes</code>: JPEG, PNG, WebP, AVIF), sanitización XML contra XSS en SVGs y depuración 100% de metadatos <code class="text-emerald-400">EXIF/GPS</code>.</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800">
+            <span class="font-bold text-amber-400">11. Aceleración por hardware en interfaz:</span>
+            <span> Contenedores táctiles con <code class="text-emerald-400">CSS Scroll Snap</code>, <code class="text-slate-100">touch-action: pan-y pinch-zoom</code> y promoción de capa GPU (<code class="text-slate-100">translate3d(0,0,0)</code>).</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800">
+            <span class="font-bold text-amber-400">12. Cumplimiento semántico y a11y:</span>
+            <span> Atributos <code class="text-emerald-400">alt</code> contextualizados en fotos informativas vs <code class="text-slate-100">aria-hidden="true"</code> en decorativos y contraste WCAG AAA en superposiciones.</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800">
+            <span class="font-bold text-amber-400">13. Resiliencia y degradación grácil:</span>
+            <span> Captura asíncrona de eventos <code class="text-emerald-400">error</code> con reemplazo automático por fallback vectorial SVG sin romper el layout y adaptación a <code class="text-slate-100">Save-Data</code>.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Script de datos de productos inyectado para el cliente -->
+    <script id="catalog-data" type="application/json" set:html={JSON.stringify(products)}></script>
+
+    <!-- ============================================================== -->
+    <!-- CLIENT SCRIPT (Astro optimiza y empaqueta con Vite)            -->
+    <!-- Buenas prácticas: Cero `onclick`, delegación limpia y eventos   -->
+    <!-- ============================================================== -->
+    <script>
+      type SizeKey = 'S' | 'M' | 'L' | 'XL';
+
+      interface ProductMeasurements {
+        S: string;
+        M: string;
+        L: string;
+        XL: string;
+      }
+
+      interface ProductImageMeta {
+        url: string;
+        r2ObjectKey?: string;
+        contentHash?: string;
+        dominantColor?: string;
+        lqipDataUri?: string;
+        exifStripped?: boolean;
+        magicBytesVerified?: boolean;
+      }
+
+      interface ProductItem {
+        id: number;
+        name: string;
+        price: string;
+        numericPrice: number;
+        category: string;
+        tag: string;
+        fit: string;
+        modelInfo: string;
+        stockLeft: number;
+        images: string[];
+        imageMeta?: ProductImageMeta[];
+        measurements: ProductMeasurements;
+        availableSizes?: Record<SizeKey, boolean>;
+        specs: string[];
+        currentSlide?: number;
+        selectedSize?: SizeKey | null;
+      }
+
+      const DEFAULT_WHATSAPP_NUMBER = '5215500000000';
+      const DEFAULT_INSTAGRAM_URL = 'https://instagram.com/direct/inbox/';
+      const STORE_CONFIG_CACHE_KEY = 'urban_drop_store_config_v1';
+      const SAVE_DATA_STORAGE_KEY = 'urban_drop_save_data_mode';
+      const SESSION_STORAGE_KEY = 'urban_drop_jwt_session_v1';
+      const ALL_SIZES: SizeKey[] = ['S', 'M', 'L', 'XL'];
+      const SUPABASE_URL = 'https://zbdblhlaacxewkxvlufs.supabase.co';
+      const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0oXCTZq-eeth1wnZI6b7wQ_ZCZdltsC';
+      const INTRINSIC_WIDTH = 700;
+      const INTRINSIC_HEIGHT = 933;
+      const CARD_SIZES_ATTR = '(max-width: 480px) 92vw, 420px';
+
+      function isAdminSessionActive(): boolean {
+        try {
+          const raw =
+            sessionStorage.getItem(SESSION_STORAGE_KEY) ||
+            localStorage.getItem(SESSION_STORAGE_KEY);
+          if (!raw) return false;
+          const parsed = JSON.parse(raw);
+          if (!parsed || typeof parsed.access_token !== 'string') return false;
+          const parts = parsed.access_token.split('.');
+          if (parts.length !== 3) return false;
+          const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+          const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+          const payload = JSON.parse(atob(padded));
+          const nowSec = Math.floor(Date.now() / 1000);
+          if (!payload || typeof payload.exp !== 'number' || payload.exp <= nowSec) {
+            return false;
+          }
+          const role = payload?.app_metadata?.role || payload?.role;
+          return role === 'admin_drop';
+        } catch {
+          return false;
+        }
+      }
+
+      function applyAdminTechnicalVisibility(): boolean {
+        const isAdmin = isAdminSessionActive();
+        document.querySelectorAll<HTMLElement>('[data-admin-only]').forEach((el) => {
+          const displayMode = el.getAttribute('data-admin-only') || 'inline-flex';
+          if (isAdmin) {
+            el.classList.remove('hidden');
+            el.classList.add(displayMode);
+          } else {
+            el.classList.add('hidden');
+            el.classList.remove('flex', 'inline-flex', 'block');
+          }
+        });
+
+        const saveDataIndicator = document.getElementById('save-data-banner-indicator');
+        if (saveDataIndicator && !isAdmin) {
+          saveDataIndicator.classList.add('hidden');
+        }
+
+        const navLoginLink = document.getElementById('nav-login-link');
+        if (navLoginLink) {
+          navLoginLink.setAttribute(
+            'title',
+            isAdmin
+              ? 'Sesión Admin Activa (Ver Panel Admin)'
+              : 'Acceso Administrativo'
+          );
+        }
+
+        if (!isAdmin) {
+          document.getElementById('ux-info-modal')?.classList.add('opacity-0', 'pointer-events-none');
+          document.getElementById('r2-pipeline-modal')?.classList.add('opacity-0', 'pointer-events-none');
+        }
+        return isAdmin;
+      }
+
+      window.addEventListener('storage', () => {
+        applyAdminTechnicalVisibility();
+      });
+
+      // Fallback vectorial SVG resiliente ante fallos de red (Pilar 13)
+      const SVG_FALLBACK_DATA_URI =
+        'data:image/svg+xml;utf8,' +
+        encodeURIComponent(
+          `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 933" width="700" height="933">` +
+            `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">` +
+            `<stop offset="0%" stop-color="#0f172a"/><stop offset="50%" stop-color="#1e1b4b"/><stop offset="100%" stop-color="#020617"/>` +
+            `</linearGradient></defs>` +
+            `<rect width="700" height="933" fill="url(#g)"/>` +
+            `<g fill="none" stroke="#ec4899" stroke-width="3" opacity="0.55">` +
+            `<rect x="190" y="290" width="320" height="320" rx="32"/>` +
+            `<path d="M240 530 L315 445 L375 505 L425 455 L465 530 Z"/>` +
+            `<circle cx="300" cy="375" r="24"/>` +
+            `</g>` +
+            `<text x="350" y="665" text-anchor="middle" fill="#f8fafc" font-family="sans-serif" font-size="22" font-weight="bold">URBAN_DROP • EDGE FALLBACK</text>` +
+            `<text x="350" y="698" text-anchor="middle" fill="#94a3b8" font-family="monospace" font-size="15">Cloudflare R2 Resilient Vector Placeholder</text>` +
+          `</svg>`
+        );
+
+      function createClientLqipDataUri(primaryColor = '#0f172a', accentColor = '#1e1b4b'): string {
+        const svg =
+          `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 40" preserveAspectRatio="none">` +
+          `<defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1">` +
+          `<stop offset="0%" stop-color="${primaryColor}"/>` +
+          `<stop offset="60%" stop-color="${accentColor}"/>` +
+          `<stop offset="100%" stop-color="#020617"/>` +
+          `</linearGradient></defs>` +
+          `<rect width="30" height="40" fill="url(#b)"/>` +
+          `</svg>`;
+        return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+      }
+
+      function detectClientSaveData(): boolean {
+        try {
+          if (localStorage.getItem(SAVE_DATA_STORAGE_KEY) === '1') return true;
+          if (localStorage.getItem(SAVE_DATA_STORAGE_KEY) === '0') return false;
+          const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+          if (conn && conn.saveData === true) return true;
+        } catch {
+          // ignore
+        }
+        return false;
+      }
+
+      function buildEdgeUrl(rawUrl: string, width: number, format: 'avif' | 'webp' | 'jpeg', quality: number): string {
+        if (!rawUrl) return SVG_FALLBACK_DATA_URI;
+        if (rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) return rawUrl;
+        const height = Math.round((width * INTRINSIC_HEIGHT) / INTRINSIC_WIDTH);
+        try {
+          const parsed = new URL(rawUrl);
+          if (parsed.hostname.includes('images.unsplash.com')) {
+            parsed.searchParams.set('auto', 'format');
+            parsed.searchParams.set('fit', 'crop');
+            parsed.searchParams.set('w', String(width));
+            parsed.searchParams.set('h', String(height));
+            parsed.searchParams.set('q', String(quality));
+            parsed.searchParams.set('fm', format === 'jpeg' ? 'jpg' : format);
+            return parsed.toString();
+          }
+          parsed.searchParams.set('cf_fmt', format);
+          parsed.searchParams.set('cf_w', String(width));
+          parsed.searchParams.set('cf_h', String(height));
+          parsed.searchParams.set('cf_q', String(quality));
+          return parsed.toString();
+        } catch {
+          return rawUrl;
+        }
+      }
+
+      function buildResponsiveSources(rawUrl: string, saveData = false) {
+        const widths = saveData ? [360, 540] : [360, 540, 720, 1080];
+        const avifQ = saveData ? 52 : 78;
+        const webpQ = saveData ? 56 : 80;
+        const jpgQ = saveData ? 60 : 82;
+        const defaultW = saveData ? 540 : 700;
+
+        return {
+          avifSrcset: widths.map((w) => `${buildEdgeUrl(rawUrl, w, 'avif', avifQ)} ${w}w`).join(', '),
+          webpSrcset: widths.map((w) => `${buildEdgeUrl(rawUrl, w, 'webp', webpQ)} ${w}w`).join(', '),
+          fallbackSrc: buildEdgeUrl(rawUrl, defaultW, 'jpeg', jpgQ),
+          sizes: CARD_SIZES_ATTR,
+        };
+      }
+
+      // Captura global asíncrona de errores de red en imágenes (Pilar 13: Resiliencia y Degradación Grácil)
+      window.addEventListener(
+        'error',
+        (event: ErrorEvent) => {
+          const target = event.target as HTMLElement | null;
+          if (!target || target.tagName !== 'IMG') return;
+          const img = target as HTMLImageElement;
+          if (img.dataset.fallbackApplied === 'true') return;
+          img.dataset.fallbackApplied = 'true';
+          const picture = img.closest('picture');
+          if (picture) {
+            picture.querySelectorAll('source').forEach((s) => s.removeAttribute('srcset'));
+          }
+          img.removeAttribute('srcset');
+          img.src = SVG_FALLBACK_DATA_URI;
+          img.style.opacity = '1';
+        },
+        true
+      );
+
+      // 1. Inicialización y Carga de Datos
+      const rawData = document.getElementById('catalog-data')?.textContent;
+      const productsList: ProductItem[] = rawData ? JSON.parse(rawData) : [];
+
+      const CART_STORAGE_KEY = 'urban_drop_cart_v1';
+      const FREE_SHIPPING_THRESHOLD = 80;
+      const STANDARD_SHIPPING_COST = 6;
+
+      interface CartItem {
+        key: string;
+        productId: number;
+        size: SizeKey;
+        qty: number;
+      }
+
+      const state = {
+        products: new Map<number, ProductItem>(),
+        savedProductIds: new Set<number>(),
+        cartItems: new Map<string, CartItem>(),
+        activeCategory: 'todos',
+        searchQuery: '',
+        activeProductId: 1,
+        activeSocialChannel: 'whatsapp' as 'whatsapp' | 'instagram',
+        activeRedirectUrl: '',
+        activeMessageText: '',
+        isMultiOrderSocial: false,
+        whatsappNumber: DEFAULT_WHATSAPP_NUMBER,
+        instagramActive: true,
+        instagramUrl: DEFAULT_INSTAGRAM_URL,
+        saveDataActive: detectClientSaveData(),
+      };
+
+      // Cargar configuración social en caché local si existe mientras responde Supabase
+      try {
+        const cachedCfg = localStorage.getItem(STORE_CONFIG_CACHE_KEY);
+        if (cachedCfg) {
+          const parsed = JSON.parse(cachedCfg);
+          if (parsed.whatsappNumber) state.whatsappNumber = String(parsed.whatsappNumber);
+          if (typeof parsed.instagramActive === 'boolean') state.instagramActive = parsed.instagramActive;
+          if (parsed.instagramUrl) state.instagramUrl = String(parsed.instagramUrl);
+        }
+      } catch {
+        // Ignorar error de lectura local
+      }
+
+      productsList.forEach((prod) => {
+        prod.currentSlide = 0;
+        prod.selectedSize = null;
+        prod.availableSizes = prod.availableSizes || { S: true, M: true, L: true, XL: true };
+        state.products.set(prod.id, prod);
+      });
+
+      function updatePictureElementForProduct(productId: number, rawUrl: string, altText: string) {
+        const sources = buildResponsiveSources(rawUrl, state.saveDataActive);
+        const avifSource = document.querySelector<HTMLSourceElement>(`[data-source-avif="${productId}"]`);
+        const webpSource = document.querySelector<HTMLSourceElement>(`[data-source-webp="${productId}"]`);
+        const imgEl = document.querySelector<HTMLImageElement>(`[data-img-product="${productId}"]`);
+
+        if (avifSource) {
+          avifSource.srcset = sources.avifSrcset;
+          avifSource.sizes = sources.sizes;
+        }
+        if (webpSource) {
+          webpSource.srcset = sources.webpSrcset;
+          webpSource.sizes = sources.sizes;
+        }
+        if (imgEl) {
+          delete imgEl.dataset.fallbackApplied;
+          imgEl.srcset = sources.webpSrcset;
+          imgEl.sizes = sources.sizes;
+          imgEl.src = sources.fallbackSrc;
+          imgEl.alt = altText;
+        }
+      }
+
+      function applySaveDataUI() {
+        const isAdmin = isAdminSessionActive();
+        const indicator = document.getElementById('save-data-banner-indicator');
+        const headerPill = document.getElementById('r2-header-pill-text');
+        const descEl = document.getElementById('r2-save-data-desc');
+        const toggleBtn = document.getElementById('toggle-save-data-btn');
+
+        if (indicator) {
+          indicator.classList.toggle('hidden', !state.saveDataActive || !isAdmin);
+        }
+        if (headerPill) {
+          headerPill.textContent = state.saveDataActive ? 'R2•LITE' : 'R2•AVIF';
+        }
+        if (descEl) {
+          descEl.innerHTML = state.saveDataActive
+            ? 'Activo (<code class="text-amber-300">Save-Data: on</code>): sirviendo <code class="text-amber-300">360w, 540w</code> comprimidos (<code class="text-amber-300">q=52 AVIF</code>).'
+            : 'Desactivado: sirviendo <code class="text-emerald-400">360w, 540w, 720w, 1080w</code> (<code class="text-emerald-400">q=78-80 AVIF/WebP</code>).';
+        }
+        if (toggleBtn) {
+          toggleBtn.textContent = state.saveDataActive ? 'Desactivar Save-Data' : 'Activar Save-Data';
+        }
+
+        // Actualizar todas las tarjetas con la nueva densidad/calidad
+        state.products.forEach((prod) => {
+          const slideIdx = prod.currentSlide ?? 0;
+          const currentUrl = prod.images[slideIdx] || prod.images[0];
+          const alt = `${prod.name} — Corte ${prod.fit} (${prod.tag}) — Vista ${slideIdx + 1} de ${prod.images.length}`;
+          updatePictureElementForProduct(prod.id, currentUrl, alt);
+        });
+      }
+
+      function applyStoreConfigToDOM() {
+        const igButtons = document.querySelectorAll<HTMLElement>('[data-channel="instagram"]');
+        igButtons.forEach((btn) => {
+          btn.classList.toggle('hidden', !state.instagramActive);
+          btn.classList.toggle('flex', state.instagramActive);
+        });
+
+        const pdmIgBtn = document.getElementById('pdm-btn-ig');
+        if (pdmIgBtn) {
+          pdmIgBtn.classList.toggle('hidden', !state.instagramActive);
+          pdmIgBtn.classList.toggle('flex', state.instagramActive);
+        }
+
+        const bagIgBtn = document.getElementById('send-bag-ig-btn');
+        if (bagIgBtn) {
+          bagIgBtn.classList.toggle('hidden', !state.instagramActive);
+          bagIgBtn.classList.toggle('flex', state.instagramActive);
+        }
+      }
+
+      function updateCategoryCountsInDOM() {
+        const allProds = Array.from(state.products.values());
+        const counts: Record<string, number> = {
+          todos: allProds.length,
+          hoodies: allProds.filter((p) => p.category === 'hoodies').length,
+          pantalones: allProds.filter((p) => p.category === 'pantalones').length,
+          't-shirts': allProds.filter((p) => p.category === 't-shirts').length,
+          chaquetas: allProds.filter((p) => p.category === 'chaquetas').length,
+        };
+
+        document.querySelectorAll<HTMLButtonElement>('.cat-btn').forEach((btn) => {
+          const catId = btn.getAttribute('data-category-id') || 'todos';
+          const badge = btn.querySelector('.cat-count');
+          if (badge && catId in counts) {
+            badge.textContent = String(counts[catId]);
+          }
+        });
+      }
+
+      function applyProductSizeAvailabilityToCard(cardEl: HTMLElement, product: ProductItem) {
+        const avail = product.availableSizes || { S: true, M: true, L: true, XL: true };
+        cardEl.querySelectorAll<HTMLButtonElement>('.size-chip').forEach((chip) => {
+          const sz = chip.getAttribute('data-size') as SizeKey;
+          const isAvail = avail[sz] !== false;
+          chip.disabled = !isAvail;
+          if (!isAvail) {
+            chip.className =
+              'size-chip min-h-[44px] py-2.5 text-xs font-bold rounded-xl border border-slate-800 bg-slate-900/40 text-slate-600 line-through cursor-not-allowed text-center';
+          }
+        });
+      }
+
+      function createProductCardElement(product: ProductItem): HTMLElement {
+        const article = document.createElement('article');
+        article.className =
+          'product-card bg-slate-900/90 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col relative transition-all duration-300';
+        article.setAttribute('data-product-id', String(product.id));
+        article.setAttribute('data-category', product.category);
+        article.setAttribute(
+          'data-search-text',
+          `${product.name} ${product.tag} ${product.fit} ${product.category} ${product.specs.join(' ')}`.toLowerCase()
+        );
+
+        const firstImgUrl = product.images[0] || '';
+        const responsive = buildResponsiveSources(firstImgUrl, state.saveDataActive);
+        const dominantColor = product.imageMeta?.[0]?.dominantColor || '#0f172a';
+        const lqipUri = product.imageMeta?.[0]?.lqipDataUri || createClientLqipDataUri(dominantColor, '#1e1b4b');
+        const altText = `${product.name} — Corte ${product.fit} (${product.tag}) — Vista 1 de ${product.images.length}`;
+
+        const dotsHtml = product.images
+          .map(
+            (_, imgIndex) =>
+              `<div class="h-1 flex-1 rounded-full transition-all duration-300 ${
+                imgIndex === 0 ? 'bg-white/90 shadow-sm' : 'bg-white/30'
+              }" data-dot-index="${imgIndex}"></div>`
+          )
+          .join('');
+
+        const sizesHtml = ALL_SIZES.map((sz) => {
+          const isAvail = product.availableSizes ? product.availableSizes[sz] !== false : true;
+          return `
+            <button
+              type="button"
+              data-action="select-size"
+              data-product-id="${product.id}"
+              data-size="${sz}"
+              ${!isAvail ? 'disabled' : ''}
+              class="${
+                isAvail
+                  ? 'size-chip min-h-[44px] py-2.5 text-xs font-bold rounded-xl border border-slate-700 bg-slate-800/50 text-slate-200 hover:border-slate-500 active:scale-95 transition-all text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500'
+                  : 'size-chip min-h-[44px] py-2.5 text-xs font-bold rounded-xl border border-slate-800 bg-slate-900/40 text-slate-600 line-through cursor-not-allowed text-center'
+              }"
+            >
+              ${sz}
+            </button>
+          `;
+        }).join('');
+
+        article.innerHTML = `
+          <div class="absolute top-3 inset-x-3 z-20 flex gap-1.5 pointer-events-none" aria-hidden="true">
+            ${dotsHtml}
+          </div>
+          <div
+            class="card-carousel-area r2-gpu-layer relative aspect-[3/4] bg-slate-950 overflow-hidden group touch-pan-y cursor-pointer"
+            style="background-color: ${dominantColor}; background-image: url('${lqipUri}'); background-size: cover; background-position: center;"
+            data-action="open-detail"
+            data-product-id="${product.id}"
+            data-dominant-color="${dominantColor}"
+          >
+            <picture class="w-full h-full block" data-picture-product="${product.id}">
+              <source
+                type="image/avif"
+                srcset="${responsive.avifSrcset}"
+                sizes="${responsive.sizes}"
+                data-source-avif="${product.id}"
+              />
+              <source
+                type="image/webp"
+                srcset="${responsive.webpSrcset}"
+                sizes="${responsive.sizes}"
+                data-source-webp="${product.id}"
+              />
+              <img
+                src="${responsive.fallbackSrc}"
+                srcset="${responsive.webpSrcset}"
+                sizes="${responsive.sizes}"
+                width="${INTRINSIC_WIDTH}"
+                height="${INTRINSIC_HEIGHT}"
+                alt="${altText}"
+                loading="lazy"
+                fetchpriority="low"
+                decoding="async"
+                class="card-img w-full h-full object-cover transition-opacity duration-200"
+                data-img-product="${product.id}"
+              />
+            </picture>
+            <div class="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent pointer-events-none" aria-hidden="true"></div>
+            <button
+              type="button"
+              data-action="open-detail"
+              data-product-id="${product.id}"
+              class="absolute top-7 left-3 z-20 bg-slate-950/85 backdrop-blur-md text-slate-100 text-[10px] font-semibold px-2.5 py-1.5 rounded-full border border-pink-500/30 flex items-center gap-1.5 shadow-lg hover:bg-pink-500 hover:text-white transition-all pointer-events-auto focus-visible:outline-none"
+            >
+              <i class="fa-solid fa-expand text-[9px] text-pink-400" aria-hidden="true"></i>
+              <span>Toca para detalles</span>
+            </button>
+            <span
+              data-admin-only="inline-flex"
+              class="${
+                isAdminSessionActive() ? 'inline-flex' : 'hidden'
+              } absolute top-7 right-12 z-20 bg-slate-950/85 backdrop-blur-md text-amber-300 text-[9px] font-mono px-2 py-1 rounded-full border border-amber-500/30 items-center gap-1 pointer-events-none"
+              aria-hidden="true"
+            >
+              <i class="fa-solid fa-bolt text-[8px]"></i>
+              <span data-r2-badge-product="${product.id}">R2•AVIF</span>
+            </span>
+            <button
+              type="button"
+              data-action="toggle-save"
+              data-product-id="${product.id}"
+              class="save-product-btn absolute top-7 right-3 z-20 w-8 h-8 rounded-full bg-slate-950/85 backdrop-blur-md text-slate-200 border border-white/15 flex items-center justify-center text-xs hover:text-pink-400 active:scale-90 transition-all focus-visible:outline-none"
+              aria-label="Guardar ${product.name} en tu selección"
+            >
+              <i class="fa-regular fa-bookmark" aria-hidden="true" data-save-icon="${product.id}"></i>
+            </button>
+            <button
+              type="button"
+              data-action="slide-prev"
+              data-product-id="${product.id}"
+              class="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/75 text-white backdrop-blur-md flex items-center justify-center opacity-85 hover:opacity-100 active:scale-90 transition-all z-20 focus-visible:outline-none"
+              aria-label="Ver foto anterior de ${product.name}"
+            >
+              <i class="fa-solid fa-chevron-left text-xs" aria-hidden="true"></i>
+            </button>
+            <button
+              type="button"
+              data-action="slide-next"
+              data-product-id="${product.id}"
+              class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/75 text-white backdrop-blur-md flex items-center justify-center opacity-85 hover:opacity-100 active:scale-90 transition-all z-20 focus-visible:outline-none"
+              aria-label="Ver siguiente foto de ${product.name}"
+            >
+              <i class="fa-solid fa-chevron-right text-xs" aria-hidden="true"></i>
+            </button>
+            <div class="absolute bottom-3 left-3 z-10 flex items-center gap-1.5 bg-slate-950/85 backdrop-blur-md text-slate-100 text-[10px] px-2.5 py-1 rounded-full border border-white/15 pointer-events-none">
+              <i class="fa-solid fa-ruler-horizontal text-pink-400 text-[9px]" aria-hidden="true"></i>
+              <span>${product.fit}</span>
+            </div>
+            <div class="absolute bottom-3 right-3 z-10 bg-slate-950/85 backdrop-blur-md text-slate-200 text-[10px] font-mono px-2.5 py-1 rounded-full border border-white/15">
+              <span data-counter-product="${product.id}">1</span>/${product.images.length}
+            </div>
+          </div>
+          <div class="p-4 flex flex-col justify-between gap-4">
+            <div class="flex items-start justify-between gap-2">
+              <div class="cursor-pointer" data-action="open-detail" data-product-id="${product.id}">
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] font-bold tracking-widest text-pink-400 uppercase">${product.tag}</span>
+                  <span class="text-[10px] font-mono text-amber-400/90 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                    Quedan ${product.stockLeft}
+                  </span>
+                </div>
+                <h2 class="font-heading font-bold text-lg text-white leading-tight hover:text-pink-400 transition-colors mt-0.5">
+                  ${product.name}
+                </h2>
+                <p class="text-[11px] text-slate-400 mt-0.5">${product.specs[0] || ''}</p>
+              </div>
+              <div class="text-right shrink-0">
+                <span class="text-[10px] text-slate-500 font-mono block">PRECIO</span>
+                <span class="font-heading font-bold text-xl text-emerald-400">${product.price}</span>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Talla requerida:</span>
+                <span data-size-label="${product.id}" class="text-[11px] font-semibold text-pink-400">
+                  Selecciona una talla
+                </span>
+              </div>
+              <div class="grid grid-cols-4 gap-2">
+                ${sizesHtml}
+              </div>
+              <div
+                data-card-measurements-box="${product.id}"
+                class="hidden mt-2 px-3 py-1.5 rounded-xl bg-slate-950/90 border border-slate-800/90 items-center justify-between text-[11px]"
+              >
+                <span class="text-slate-400 flex items-center gap-1.5">
+                  <i class="fa-solid fa-ruler-combined text-pink-400 text-[10px]" aria-hidden="true"></i>
+                  <span>Medidas exactas:</span>
+                </span>
+                <span data-card-measurements-text="${product.id}" class="font-mono font-bold text-emerald-400"></span>
+              </div>
+            </div>
+            <div class="pt-1 flex gap-2">
+              <button
+                type="button"
+                data-action="add-to-cart"
+                data-product-id="${product.id}"
+                class="min-h-[44px] py-3 px-3 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/40 text-pink-300 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all focus-visible:outline-none"
+                aria-label="Agregar ${product.name} al carrito"
+              >
+                <i class="fa-solid fa-cart-plus text-xs" aria-hidden="true"></i>
+                <span data-btn-text-cart="${product.id}">Agregar</span>
+              </button>
+              <button
+                type="button"
+                data-action="trigger-social"
+                data-product-id="${product.id}"
+                data-channel="whatsapp"
+                class="flex-1 min-h-[44px] py-3 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all btn-social-pulse focus-visible:outline-none"
+              >
+                <i class="fa-brands fa-whatsapp text-base" aria-hidden="true"></i>
+                <span data-btn-text-wa="${product.id}">Pedir por WhatsApp</span>
+              </button>
+              <button
+                type="button"
+                data-action="trigger-social"
+                data-product-id="${product.id}"
+                data-channel="instagram"
+                class="${
+                  state.instagramActive ? 'flex' : 'hidden'
+                } w-12 h-11 min-h-[44px] rounded-xl bg-slate-800 hover:bg-slate-700 text-pink-400 border border-slate-700 items-center justify-center text-base active:scale-95 transition-all focus-visible:outline-none"
+                aria-label="Pedir ${product.name} por mensaje directo de Instagram"
+              >
+                <i class="fa-brands fa-instagram" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        `;
+
+        const carouselEl = article.querySelector<HTMLElement>('.card-carousel-area');
+        if (carouselEl) {
+          attachHorizontalSwipe(
+            carouselEl,
+            () => changeProductSlide(product.id, 1),
+            () => changeProductSlide(product.id, -1)
+          );
+        }
+
+        return article;
+      }
+
+      // 1.1 Sincronización en vivo desde Supabase PostgreSQL (Productos + Configuración Social + Metadatos R2)
+      async function syncCatalogFromSupabase() {
+        applyAdminTechnicalVisibility();
+        applyStoreConfigToDOM();
+        applySaveDataUI();
+
+        try {
+          const cfgRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/configuracion_tienda?select=whatsapp_numero,instagram_activo,instagram_url&clave=eq.principal&limit=1`,
+            {
+              headers: {
+                apikey: SUPABASE_PUBLISHABLE_KEY,
+                Accept: 'application/json',
+              },
+            }
+          );
+          if (cfgRes.ok) {
+            const cfgRows = await cfgRes.json();
+            if (Array.isArray(cfgRows) && cfgRows.length > 0) {
+              const cfg = cfgRows[0];
+              state.whatsappNumber = cfg.whatsapp_numero || DEFAULT_WHATSAPP_NUMBER;
+              state.instagramActive = Boolean(cfg.instagram_activo);
+              state.instagramUrl = cfg.instagram_url || DEFAULT_INSTAGRAM_URL;
+              localStorage.setItem(
+                STORE_CONFIG_CACHE_KEY,
+                JSON.stringify({
+                  whatsappNumber: state.whatsappNumber,
+                  instagramActive: state.instagramActive,
+                  instagramUrl: state.instagramUrl,
+                })
+              );
+              applyStoreConfigToDOM();
+            }
+          }
+        } catch {
+          // Mantiene configuración en memoria
+        }
+
+        const selectQuery = [
+          'id',
+          'nombre',
+          'precio',
+          'etiqueta',
+          'corte_fit',
+          'info_modelo',
+          'stock_disponible',
+          'orden',
+          'categorias!inner(slug,nombre,icono)',
+          'producto_imagenes(url,alt_text,orden,r2_object_key,content_hash,dominant_color,lqip_data_uri,exif_stripped,magic_bytes_verified)',
+          'producto_tallas(talla,medidas_cm,stock_talla,orden)',
+          'producto_especificaciones(descripcion,orden)',
+        ].join(',');
+
+        const url = `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(
+          selectQuery
+        )}&activo=eq.true&order=id.desc`;
+
+        try {
+          const res = await fetch(url, {
+            headers: {
+              apikey: SUPABASE_PUBLISHABLE_KEY,
+              Accept: 'application/json',
+            },
+          });
+          if (!res.ok) return;
+          const rows = await res.json();
+          if (!Array.isArray(rows) || rows.length === 0) return;
+
+          const catalogContainer = document.getElementById('catalog-container');
+
+          rows.forEach((row: any) => {
+            const numPrice = typeof row.precio === 'number' ? row.precio : parseFloat(String(row.precio));
+            const sortedImgObjects = [...(row.producto_imagenes || [])].sort((a, b) => a.orden - b.orden);
+            const sortedImages = sortedImgObjects.map((img) => img.url);
+            const imageMeta: ProductImageMeta[] = sortedImgObjects.map((img) => ({
+              url: img.url,
+              r2ObjectKey: img.r2_object_key,
+              contentHash: img.content_hash,
+              dominantColor: img.dominant_color || '#0f172a',
+              lqipDataUri: img.lqip_data_uri || undefined,
+              exifStripped: img.exif_stripped !== false,
+              magicBytesVerified: img.magic_bytes_verified !== false,
+            }));
+
+            if (sortedImages.length === 0) {
+              sortedImages.push('https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=700');
+            }
+
+            const measurements: ProductMeasurements = {
+              S: 'Pecho: 56cm | Largo: 68cm',
+              M: 'Pecho: 59cm | Largo: 71cm',
+              L: 'Pecho: 62cm | Largo: 74cm',
+              XL: 'Pecho: 65cm | Largo: 77cm',
+            };
+            const availableSizes: Record<SizeKey, boolean> = {
+              S: true,
+              M: true,
+              L: true,
+              XL: true,
+            };
+
+            if (Array.isArray(row.producto_tallas) && row.producto_tallas.length > 0) {
+              ALL_SIZES.forEach((sz) => {
+                availableSizes[sz] = false;
+              });
+              for (const t of row.producto_tallas) {
+                if (t.talla in measurements) {
+                  const key = t.talla as SizeKey;
+                  measurements[key] = t.medidas_cm;
+                  availableSizes[key] = (t.stock_talla ?? 1) > 0;
+                }
+              }
+            }
+
+            const sortedSpecs = [...(row.producto_especificaciones || [])]
+              .sort((a, b) => a.orden - b.orden)
+              .map((s) => s.descripcion);
+
+            const existing = state.products.get(row.id);
+            const mappedProduct: ProductItem = {
+              id: row.id,
+              name: row.nombre,
+              price: `$${numPrice.toFixed(2)}`,
+              numericPrice: numPrice,
+              category: row.categorias?.slug || 'hoodies',
+              tag: row.etiqueta,
+              fit: row.corte_fit,
+              modelInfo: row.info_modelo,
+              stockLeft: row.stock_disponible,
+              images: sortedImages,
+              imageMeta,
+              measurements,
+              availableSizes,
+              specs: sortedSpecs,
+              currentSlide: existing?.currentSlide ?? 0,
+              selectedSize: existing?.selectedSize ?? null,
+            };
+            state.products.set(row.id, mappedProduct);
+
+            const cardEl = document.querySelector<HTMLElement>(`.product-card[data-product-id="${row.id}"]`);
+            if (cardEl) {
+              cardEl.setAttribute('data-category', mappedProduct.category);
+              cardEl.setAttribute(
+                'data-search-text',
+                `${mappedProduct.name} ${mappedProduct.tag} ${mappedProduct.fit} ${mappedProduct.category} ${mappedProduct.specs.join(' ')}`.toLowerCase()
+              );
+              const titleEl = cardEl.querySelector('h2');
+              if (titleEl) titleEl.textContent = mappedProduct.name;
+              const slideIdx = mappedProduct.currentSlide ?? 0;
+              const currentImgUrl = mappedProduct.images[slideIdx] || mappedProduct.images[0];
+              const altText = `${mappedProduct.name} — Corte ${mappedProduct.fit} (${mappedProduct.tag}) — Vista ${slideIdx + 1} de ${mappedProduct.images.length}`;
+              updatePictureElementForProduct(row.id, currentImgUrl, altText);
+
+              // Aplicar LQIP / Color dominante si existe en BD
+              const carouselArea = cardEl.querySelector<HTMLElement>('.card-carousel-area');
+              const meta0 = mappedProduct.imageMeta?.[slideIdx] || mappedProduct.imageMeta?.[0];
+              if (carouselArea && meta0) {
+                const domColor = meta0.dominantColor || '#0f172a';
+                const lqip = meta0.lqipDataUri || createClientLqipDataUri(domColor, '#1e1b4b');
+                carouselArea.style.backgroundColor = domColor;
+                carouselArea.style.backgroundImage = `url("${lqip}")`;
+              }
+
+              applyProductSizeAvailabilityToCard(cardEl, mappedProduct);
+            } else if (catalogContainer) {
+              const newCard = createProductCardElement(mappedProduct);
+              catalogContainer.prepend(newCard);
+            }
+          });
+
+          // Actualizar prioridad LCP en la primera tarjeta visible del DOM
+          const allCards = document.querySelectorAll<HTMLElement>('.product-card');
+          allCards.forEach((card, idx) => {
+            const img = card.querySelector<HTMLImageElement>('img.card-img');
+            const badge = card.querySelector<HTMLElement>('[data-r2-badge-product]');
+            if (img) {
+              img.loading = idx === 0 ? 'eager' : 'lazy';
+              img.setAttribute('fetchpriority', idx === 0 ? 'high' : 'low');
+            }
+            if (badge) {
+              badge.textContent = idx === 0 ? 'LCP•AVIF' : state.saveDataActive ? 'R2•LITE' : 'R2•AVIF';
+            }
+          });
+
+          updateCategoryCountsInDOM();
+          applyStoreConfigToDOM();
+          applyCatalogFilters();
+          applyAdminTechnicalVisibility();
+          updateSavedBagUI();
+        } catch {
+          // Mantiene datos pre-renderizados del servidor si no hay red
+        }
+      }
+
+      syncCatalogFromSupabase();
+
+      // 2. Elementos del DOM
+      const detailModal = document.getElementById('product-detail-modal') as HTMLElement;
+      const detailModalCard = document.getElementById('detail-modal-card') as HTMLElement;
+      const socialModal = document.getElementById('social-modal') as HTMLElement;
+      const socialModalCard = document.getElementById('social-modal-card') as HTMLElement;
+      const uxInfoModal = document.getElementById('ux-info-modal') as HTMLElement;
+      const r2PipelineModal = document.getElementById('r2-pipeline-modal') as HTMLElement;
+      const savedBagModal = document.getElementById('saved-bag-modal') as HTMLElement;
+      const searchInput = document.getElementById('catalog-search-input') as HTMLInputElement;
+      const clearSearchBtn = document.getElementById('clear-search-btn') as HTMLButtonElement;
+      const emptyCatalogState = document.getElementById('empty-catalog-state') as HTMLElement;
+      const toastEl = document.getElementById('toast-notification') as HTMLElement;
+      const toastMsgEl = document.getElementById('toast-message') as HTMLElement;
+
+      let toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+      function showToast(message: string) {
+        if (!toastEl || !toastMsgEl) return;
+        toastMsgEl.textContent = message;
+        toastEl.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-3');
+        toastEl.classList.add('opacity-100', 'translate-y-0');
+
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toastEl.classList.add('opacity-0', 'pointer-events-none', '-translate-y-3');
+          toastEl.classList.remove('opacity-100', 'translate-y-0');
+        }, 2400);
+      }
+
+      // 3. Filtrado Combinado (Categorías + Búsqueda en tiempo real)
+      const categoryPills = document.querySelectorAll<HTMLButtonElement>('.cat-btn');
+
+      function applyCatalogFilters() {
+        let visibleCount = 0;
+        const query = state.searchQuery.trim().toLowerCase();
+        const productCards = document.querySelectorAll<HTMLElement>('.product-card');
+
+        productCards.forEach((card) => {
+          const cardCat = card.getAttribute('data-category') || '';
+          const searchText = card.getAttribute('data-search-text') || '';
+
+          const matchesCategory = state.activeCategory === 'todos' || cardCat === state.activeCategory;
+          const matchesQuery = !query || searchText.includes(query);
+
+          if (matchesCategory && matchesQuery) {
+            card.style.display = 'flex';
+            visibleCount++;
+          } else {
+            card.style.display = 'none';
+          }
+        });
+
+        if (emptyCatalogState) {
+          emptyCatalogState.classList.toggle('hidden', visibleCount > 0);
+        }
+      }
+
+      categoryPills.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const selectedCat = btn.getAttribute('data-category-id') || 'todos';
+          state.activeCategory = selectedCat;
+
+          categoryPills.forEach((b) => {
+            b.setAttribute('aria-pressed', 'false');
+            b.className = "cat-btn snap-start font-bold text-xs px-3.5 py-2 rounded-xl whitespace-nowrap transition-all flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800";
+            const badge = b.querySelector('.cat-count');
+            if (badge) badge.className = "cat-count text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-400";
+          });
+
+          btn.setAttribute('aria-pressed', 'true');
+          btn.className = "cat-btn snap-start font-bold text-xs px-3.5 py-2 rounded-xl whitespace-nowrap transition-all flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 bg-pink-500 text-white shadow-md shadow-pink-500/20";
+          const activeBadge = btn.querySelector('.cat-count');
+          if (activeBadge) activeBadge.className = "cat-count text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-white/20 text-white";
+
+          applyCatalogFilters();
+        });
+      });
+
+      searchInput?.addEventListener('input', () => {
+        state.searchQuery = searchInput.value;
+        if (clearSearchBtn) {
+          clearSearchBtn.classList.toggle('hidden', state.searchQuery.length === 0);
+          clearSearchBtn.classList.toggle('flex', state.searchQuery.length > 0);
+        }
+        applyCatalogFilters();
+      });
+
+      clearSearchBtn?.addEventListener('click', () => {
+        if (!searchInput) return;
+        searchInput.value = '';
+        state.searchQuery = '';
+        clearSearchBtn.classList.add('hidden');
+        clearSearchBtn.classList.remove('flex');
+        applyCatalogFilters();
+      });
+
+      document.getElementById('reset-filters-btn')?.addEventListener('click', () => {
+        if (searchInput) searchInput.value = '';
+        state.searchQuery = '';
+        clearSearchBtn?.classList.add('hidden');
+        clearSearchBtn?.classList.remove('flex');
+        const firstPill = categoryPills[0];
+        if (firstPill) firstPill.click();
+      });
+
+      // 4. Delegación de Eventos en el Feed Principal
+      document.addEventListener('click', (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        const actionBtn = target.closest<HTMLElement>('[data-action]');
+        if (!actionBtn) return;
+
+        const action = actionBtn.getAttribute('data-action');
+        const productId = Number(actionBtn.getAttribute('data-product-id'));
+        if (!productId) return;
+
+        if (action === 'slide-prev') {
+          e.stopPropagation();
+          changeProductSlide(productId, -1);
+        } else if (action === 'slide-next') {
+          e.stopPropagation();
+          changeProductSlide(productId, 1);
+        } else if (action === 'toggle-save') {
+          e.stopPropagation();
+          toggleSaveProduct(productId);
+        } else if (action === 'add-to-cart') {
+          e.stopPropagation();
+          addToCart(productId);
+        } else if (action === 'open-detail') {
+          openDetailModal(productId);
+        } else if (action === 'select-size') {
+          const size = actionBtn.getAttribute('data-size') as SizeKey;
+          selectProductSize(productId, size);
+        } else if (action === 'trigger-social') {
+          const channel = actionBtn.getAttribute('data-channel') as 'whatsapp' | 'instagram';
+          triggerSocial(productId, channel);
+        }
+      });
+
+      // 5. Soporte de Gestos Táctiles (Swipe Horizontal en Tarjetas y Modal)
+      function attachHorizontalSwipe(
+        element: HTMLElement,
+        onSwipeLeft: () => void,
+        onSwipeRight: () => void
+      ) {
+        let startX = 0;
+        let startY = 0;
+        let swiped = false;
+
+        element.addEventListener(
+          'touchstart',
+          (e: TouchEvent) => {
+            if (e.touches.length !== 1) return;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            swiped = false;
+          },
+          { passive: true }
+        );
+
+        element.addEventListener(
+          'touchend',
+          (e: TouchEvent) => {
+            if (e.changedTouches.length !== 1) return;
+            const dx = e.changedTouches[0].clientX - startX;
+            const dy = e.changedTouches[0].clientY - startY;
+
+            if (Math.abs(dx) > 42 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+              swiped = true;
+              if (dx < 0) {
+                onSwipeLeft();
+              } else {
+                onSwipeRight();
+              }
+            }
+          },
+          { passive: true }
+        );
+
+        element.addEventListener(
+          'click',
+          (e: MouseEvent) => {
+            if (swiped) {
+              e.stopPropagation();
+              swiped = false;
+            }
+          },
+          true
+        );
+      }
+
+      document.querySelectorAll<HTMLElement>('.card-carousel-area').forEach((carouselEl) => {
+        const pid = Number(carouselEl.getAttribute('data-product-id'));
+        if (!pid) return;
+        attachHorizontalSwipe(
+          carouselEl,
+          () => changeProductSlide(pid, 1),
+          () => changeProductSlide(pid, -1)
+        );
+      });
+
+      const pdmGalleryContainer = document.getElementById('pdm-gallery-container');
+      if (pdmGalleryContainer) {
+        attachHorizontalSwipe(
+          pdmGalleryContainer,
+          () => changeProductSlide(state.activeProductId, 1),
+          () => changeProductSlide(state.activeProductId, -1)
+        );
+      }
+
+      // 6. Lógica de Carrusel Sincronizada con Negociación AVIF/WebP (Tarjeta + Modal Detalle)
+      function changeProductSlide(productId: number, step: number) {
+        const product = state.products.get(productId);
+        if (!product) return;
+
+        const total = product.images.length;
+        let current = (product.currentSlide ?? 0) + step;
+        if (current < 0) current = total - 1;
+        if (current >= total) current = 0;
+        product.currentSlide = current;
+
+        const imgEl = document.querySelector<HTMLImageElement>(`[data-img-product="${productId}"]`);
+        const counterEl = document.querySelector<HTMLElement>(`[data-counter-product="${productId}"]`);
+        const card = document.querySelector<HTMLElement>(`.product-card[data-product-id="${productId}"]`);
+
+        if (imgEl) {
+          imgEl.style.opacity = '0.3';
+          setTimeout(() => {
+            const altText = `${product.name} — Corte ${product.fit} (${product.tag}) — Vista ${current + 1} de ${total}`;
+            updatePictureElementForProduct(productId, product.images[current], altText);
+            imgEl.style.opacity = '1';
+          }, 120);
+        }
+
+        if (counterEl) {
+          counterEl.textContent = String(current + 1);
+        }
+
+        if (card) {
+          const dots = card.querySelectorAll<HTMLElement>('[data-dot-index]');
+          dots.forEach((dot, idx) => {
+            dot.className = idx === current
+              ? "h-1 flex-1 rounded-full bg-white/90 shadow-sm transition-all duration-300"
+              : "h-1 flex-1 rounded-full bg-white/30 transition-all duration-300";
+          });
+        }
+
+        if (state.activeProductId === productId && !detailModal.classList.contains('pointer-events-none')) {
+          updateDetailGallery();
+        }
+      }
+
+      // 7. Selección y Sincronización de Tallas (Tarjeta + Modal Detalle + Modal Social)
+      function selectProductSize(productId: number, size: SizeKey) {
+        const product = state.products.get(productId);
+        if (!product) return;
+        if (product.availableSizes && product.availableSizes[size] === false) {
+          showToast(`La talla ${size} está agotada en este modelo`);
+          return;
+        }
+        product.selectedSize = size;
+
+        const card = document.querySelector<HTMLElement>(`.product-card[data-product-id="${productId}"]`);
+        if (card) {
+          const chips = card.querySelectorAll<HTMLButtonElement>('.size-chip');
+          chips.forEach((chip) => {
+            const chipSize = chip.getAttribute('data-size') as SizeKey;
+            const isAvail = product.availableSizes ? product.availableSizes[chipSize] !== false : true;
+            if (!isAvail) {
+              chip.disabled = true;
+              chip.className = "size-chip min-h-[44px] py-2.5 text-xs font-bold rounded-xl border border-slate-800 bg-slate-900/40 text-slate-600 line-through cursor-not-allowed text-center";
+            } else if (chipSize === size) {
+              chip.className = "size-chip min-h-[44px] py-2.5 text-xs font-bold rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white shadow-lg shadow-pink-500/10 active:scale-95 transition-all text-center focus-visible:outline-none";
+            } else {
+              chip.className = "size-chip min-h-[44px] py-2.5 text-xs font-bold rounded-xl border border-slate-700 bg-slate-800/50 text-slate-200 hover:border-slate-500 active:scale-95 transition-all text-center focus-visible:outline-none";
+            }
+          });
+
+          const label = card.querySelector<HTMLElement>(`[data-size-label="${productId}"]`);
+          const waBtnText = card.querySelector<HTMLElement>(`[data-btn-text-wa="${productId}"]`);
+          const cardMeasBox = card.querySelector<HTMLElement>(`[data-card-measurements-box="${productId}"]`);
+          const cardMeasText = card.querySelector<HTMLElement>(`[data-card-measurements-text="${productId}"]`);
+
+          if (label) {
+            label.textContent = `Talla ${size} seleccionada`;
+            label.className = "text-[11px] font-bold text-emerald-400";
+          }
+          if (waBtnText) {
+            waBtnText.textContent = `Pedir Talla ${size} por WhatsApp`;
+          }
+          if (cardMeasBox && cardMeasText) {
+            cardMeasBox.classList.remove('hidden');
+            cardMeasBox.classList.add('flex');
+            cardMeasText.textContent = product.measurements[size];
+          }
+        }
+
+        if (state.activeProductId === productId) {
+          syncDetailModalSizes(productId);
+          syncSocialModalState();
+        }
+
+        updateSavedBagUI();
+      }
+
+      // 8. Carrito de Compras Completo (Persistencia Local + Cantidades + Tallas + Envío Gratis)
+      function getDefaultAvailableSize(product: ProductItem): SizeKey {
+        if (product.selectedSize && (!product.availableSizes || product.availableSizes[product.selectedSize] !== false)) {
+          return product.selectedSize;
+        }
+        const preferredOrder: SizeKey[] = ['M', 'L', 'S', 'XL'];
+        for (const sz of preferredOrder) {
+          if (!product.availableSizes || product.availableSizes[sz] !== false) {
+            return sz;
+          }
+        }
+        return 'M';
+      }
+
+      function saveCartToStorage() {
+        try {
+          const serialized = Array.from(state.cartItems.values());
+          localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(serialized));
+        } catch {
+          // ignore storage quota errors
+        }
+      }
+
+      function loadCartFromStorage() {
+        try {
+          const raw = localStorage.getItem(CART_STORAGE_KEY);
+          if (!raw) return;
+          const items = JSON.parse(raw);
+          if (!Array.isArray(items)) return;
+          state.cartItems.clear();
+          state.savedProductIds.clear();
+          items.forEach((entry: any) => {
+            const pid = Number(entry.productId);
+            const sz = (ALL_SIZES.includes(entry.size) ? entry.size : 'M') as SizeKey;
+            const qty = Math.max(1, Math.min(20, Number(entry.qty) || 1));
+            if (pid > 0) {
+              const key = `${pid}:${sz}`;
+              state.cartItems.set(key, { key, productId: pid, size: sz, qty });
+              state.savedProductIds.add(pid);
+            }
+          });
+        } catch {
+          // ignore
+        }
+      }
+
+      function syncSavedProductIdsFromCart() {
+        state.savedProductIds.clear();
+        state.cartItems.forEach((item) => {
+          state.savedProductIds.add(item.productId);
+        });
+      }
+
+      function getProductTotalQtyInCart(productId: number): number {
+        let sum = 0;
+        state.cartItems.forEach((item) => {
+          if (item.productId === productId) sum += item.qty;
+        });
+        return sum;
+      }
+
+      function addToCart(productId: number, explicitSize?: SizeKey | null, deltaQty = 1) {
+        const product = state.products.get(productId);
+        if (!product) return;
+
+        const chosenSize: SizeKey = explicitSize || product.selectedSize || getDefaultAvailableSize(product);
+        if (product.availableSizes && product.availableSizes[chosenSize] === false) {
+          showToast(`La talla ${chosenSize} está agotada en este modelo`);
+          return;
+        }
+
+        if (!product.selectedSize) {
+          selectProductSize(productId, chosenSize);
+        }
+
+        const key = `${productId}:${chosenSize}`;
+        const existing = state.cartItems.get(key);
+        const maxStock = Math.max(1, Number(product.stockLeft) || 10);
+        const currentQty = existing ? existing.qty : 0;
+
+        if (currentQty + deltaQty > maxStock) {
+          showToast(`Stock máximo alcanzado (${maxStock} pzs disponibles de ${product.name})`);
+          return;
+        }
+
+        const nextQty = currentQty + deltaQty;
+        state.cartItems.set(key, {
+          key,
+          productId,
+          size: chosenSize,
+          qty: nextQty,
+        });
+
+        syncSavedProductIdsFromCart();
+        saveCartToStorage();
+        updateSavedBagUI();
+        showToast(`🛒 ${product.name} (Talla ${chosenSize}) agregada al carrito`);
+      }
+
+      function changeCartItemQty(key: string, delta: number) {
+        const item = state.cartItems.get(key);
+        if (!item) return;
+        const product = state.products.get(item.productId);
+        const maxStock = product ? Math.max(1, Number(product.stockLeft) || 10) : 10;
+        const nextQty = item.qty + delta;
+
+        if (nextQty <= 0) {
+          state.cartItems.delete(key);
+          if (product) {
+            showToast(`${product.name} (Talla ${item.size}) eliminada del carrito`);
+          }
+        } else if (nextQty > maxStock) {
+          showToast(`Solo quedan ${maxStock} piezas disponibles de este modelo`);
+          return;
+        } else {
+          item.qty = nextQty;
+          state.cartItems.set(key, item);
+        }
+
+        syncSavedProductIdsFromCart();
+        saveCartToStorage();
+        updateSavedBagUI();
+      }
+
+      function changeCartItemSize(oldKey: string, newSize: SizeKey) {
+        const item = state.cartItems.get(oldKey);
+        if (!item || item.size === newSize) return;
+        const product = state.products.get(item.productId);
+        if (!product) return;
+
+        if (product.availableSizes && product.availableSizes[newSize] === false) {
+          showToast(`La talla ${newSize} está agotada`);
+          return;
+        }
+
+        const newKey = `${item.productId}:${newSize}`;
+        const targetExisting = state.cartItems.get(newKey);
+        const maxStock = Math.max(1, Number(product.stockLeft) || 10);
+        const combinedQty = Math.min(maxStock, (targetExisting ? targetExisting.qty : 0) + item.qty);
+
+        state.cartItems.delete(oldKey);
+        state.cartItems.set(newKey, {
+          key: newKey,
+          productId: item.productId,
+          size: newSize,
+          qty: combinedQty,
+        });
+
+        product.selectedSize = newSize;
+        syncSavedProductIdsFromCart();
+        saveCartToStorage();
+        updateSavedBagUI();
+        showToast(`Talla actualizada a ${newSize}`);
+      }
+
+      function removeCartItem(key: string) {
+        const item = state.cartItems.get(key);
+        if (!item) return;
+        const product = state.products.get(item.productId);
+        state.cartItems.delete(key);
+        syncSavedProductIdsFromCart();
+        saveCartToStorage();
+        updateSavedBagUI();
+        if (product) {
+          showToast(`${product.name} eliminada del carrito`);
+        }
+      }
+
+      function clearCart() {
+        if (state.cartItems.size === 0) return;
+        state.cartItems.clear();
+        state.savedProductIds.clear();
+        saveCartToStorage();
+        updateSavedBagUI();
+        showToast('Carrito vaciado');
+      }
+
+      function toggleSaveProduct(productId: number) {
+        const product = state.products.get(productId);
+        if (!product) return;
+
+        if (state.savedProductIds.has(productId)) {
+          Array.from(state.cartItems.keys()).forEach((k) => {
+            if (k.startsWith(`${productId}:`)) {
+              state.cartItems.delete(k);
+            }
+          });
+          syncSavedProductIdsFromCart();
+          saveCartToStorage();
+          updateSavedBagUI();
+          showToast(`${product.name} quitada del carrito`);
+        } else {
+          addToCart(productId, product.selectedSize, 1);
+        }
+      }
+
+      function getCartTotals() {
+        let totalUnits = 0;
+        let subtotal = 0;
+        state.cartItems.forEach((item) => {
+          const prod = state.products.get(item.productId);
+          if (!prod) return;
+          totalUnits += item.qty;
+          subtotal += prod.numericPrice * item.qty;
+        });
+        const qualifiesFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD || subtotal === 0;
+        const shipping = subtotal === 0 ? 0 : qualifiesFreeShipping ? 0 : STANDARD_SHIPPING_COST;
+        const grandTotal = subtotal + shipping;
+        const missingForFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
+        const progressPct = subtotal <= 0 ? 0 : Math.min(100, Math.round((subtotal / FREE_SHIPPING_THRESHOLD) * 100));
+
+        return {
+          totalUnits,
+          subtotal,
+          shipping,
+          grandTotal,
+          qualifiesFreeShipping,
+          missingForFreeShipping,
+          progressPct,
+        };
+      }
+
+      function updateSavedBagUI() {
+        const { totalUnits, subtotal, shipping, grandTotal, qualifiesFreeShipping, missingForFreeShipping, progressPct } =
+          getCartTotals();
+
+        const headerBadge = document.getElementById('saved-bag-badge');
+        const floatingBar = document.getElementById('floating-bag-bar');
+        const floatingCount = document.getElementById('floating-bag-count');
+        const floatingTotal = document.getElementById('floating-bag-total');
+        const floatingShippingTag = document.getElementById('floating-bag-shipping-tag');
+        const countPill = document.getElementById('cart-items-count-pill');
+        const clearBtn = document.getElementById('clear-cart-btn');
+        const shippingBox = document.getElementById('cart-free-shipping-box');
+        const shippingMsg = document.getElementById('cart-shipping-msg');
+        const shippingPct = document.getElementById('cart-shipping-pct');
+        const shippingBar = document.getElementById('cart-shipping-bar');
+
+        state.products.forEach((_, pid) => {
+          const icon = document.querySelector<HTMLElement>(`[data-save-icon="${pid}"]`);
+          const inCartQty = getProductTotalQtyInCart(pid);
+          if (icon) {
+            icon.className =
+              inCartQty > 0 ? 'fa-solid fa-bookmark text-pink-400' : 'fa-regular fa-bookmark';
+          }
+          const cardCartBtnText = document.querySelector<HTMLElement>(`[data-btn-text-cart="${pid}"]`);
+          if (cardCartBtnText) {
+            cardCartBtnText.textContent = inCartQty > 0 ? `En Carrito (${inCartQty})` : 'Agregar';
+          }
+        });
+
+        const pdmSaveIcon = document.getElementById('pdm-save-icon');
+        if (pdmSaveIcon) {
+          pdmSaveIcon.className = state.savedProductIds.has(state.activeProductId)
+            ? 'fa-solid fa-bookmark text-pink-400'
+            : 'fa-regular fa-bookmark';
+        }
+
+        const pdmAddCartText = document.getElementById('pdm-btn-add-cart-text');
+        if (pdmAddCartText) {
+          const activeQty = getProductTotalQtyInCart(state.activeProductId);
+          pdmAddCartText.textContent =
+            activeQty > 0 ? `Agregar otra (${activeQty} en carrito)` : 'Agregar al Carrito';
+        }
+
+        if (headerBadge) {
+          headerBadge.textContent = String(totalUnits);
+          headerBadge.classList.toggle('hidden', totalUnits === 0);
+          headerBadge.classList.toggle('flex', totalUnits > 0);
+        }
+
+        if (countPill) {
+          countPill.textContent = `${totalUnits} ${totalUnits === 1 ? 'prenda' : 'prendas'}`;
+        }
+
+        if (clearBtn) {
+          clearBtn.classList.toggle('hidden', totalUnits === 0);
+        }
+
+        if (shippingBox && shippingMsg && shippingPct && shippingBar) {
+          shippingPct.textContent = `${progressPct}%`;
+          shippingBar.style.width = `${progressPct}%`;
+          if (subtotal === 0) {
+            shippingMsg.textContent = `Agrega $${FREE_SHIPPING_THRESHOLD.toFixed(0)} USD para desbloquear Envío Express GRATIS`;
+          } else if (qualifiesFreeShipping) {
+            shippingMsg.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i>¡Envío Express GRATIS desbloqueado!`;
+          } else {
+            shippingMsg.textContent = `Te faltan $${missingForFreeShipping.toFixed(2)} USD para Envío Express GRATIS`;
+          }
+        }
+
+        if (floatingBar && floatingCount && floatingTotal) {
+          floatingCount.textContent = String(totalUnits);
+          floatingTotal.textContent = `$${grandTotal.toFixed(2)} USD`;
+          if (floatingShippingTag) {
+            floatingShippingTag.textContent = qualifiesFreeShipping
+              ? '• Envío GRATIS'
+              : `• +$${shipping.toFixed(2)} envío`;
+          }
+          if (totalUnits > 0) {
+            floatingBar.classList.remove('translate-y-28', 'opacity-0', 'pointer-events-none');
+          } else {
+            floatingBar.classList.add('translate-y-28', 'opacity-0', 'pointer-events-none');
+          }
+        }
+
+        renderSavedBagModalItems();
+      }
+
+      function renderSavedBagModalItems() {
+        const container = document.getElementById('saved-bag-items');
+        const subtotalEl = document.getElementById('cart-subtotal-val');
+        const shippingEl = document.getElementById('cart-shipping-val');
+        const totalEl = document.getElementById('saved-bag-modal-total');
+        if (!container || !totalEl) return;
+
+        const { totalUnits, subtotal, shipping, grandTotal, qualifiesFreeShipping } = getCartTotals();
+
+        if (subtotalEl) subtotalEl.textContent = `$${subtotal.toFixed(2)} USD`;
+        if (shippingEl) {
+          if (subtotal === 0) {
+            shippingEl.textContent = '$0.00';
+            shippingEl.className = 'font-mono text-slate-400';
+          } else if (qualifiesFreeShipping) {
+            shippingEl.textContent = 'GRATIS';
+            shippingEl.className = 'font-mono font-bold text-emerald-400';
+          } else {
+            shippingEl.textContent = `$${shipping.toFixed(2)} USD`;
+            shippingEl.className = 'font-mono text-amber-300';
+          }
+        }
+
+        if (state.cartItems.size === 0 || totalUnits === 0) {
+          container.innerHTML = `
+            <div class="text-center py-8 text-slate-400 space-y-2.5">
+              <div class="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-500">
+                <i class="fa-solid fa-bag-shopping text-xl"></i>
+              </div>
+              <p class="font-semibold text-slate-200 text-xs">Tu carrito está vacío</p>
+              <p class="text-[11px] text-slate-500 max-w-[260px] mx-auto">Selecciona tu talla y presiona <strong class="text-pink-400">"Agregar"</strong> en cualquier prenda para armar tu pedido.</p>
+            </div>
+          `;
+          totalEl.textContent = '$0.00 USD';
+          return;
+        }
+
+        const rows: string[] = [];
+
+        state.cartItems.forEach((item) => {
+          const prod = state.products.get(item.productId);
+          if (!prod) return;
+          const lineTotal = prod.numericPrice * item.qty;
+          const exactMeas = prod.measurements?.[item.size] || '';
+
+          const sizeOptionsHtml = ALL_SIZES.map((sz) => {
+            const isAvail = prod.availableSizes ? prod.availableSizes[sz] !== false : true;
+            const isCurrent = sz === item.size;
+            return `<button
+              type="button"
+              data-cart-size-key="${item.key}"
+              data-cart-new-size="${sz}"
+              ${!isAvail ? 'disabled' : ''}
+              class="px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                !isAvail
+                  ? 'bg-slate-900 text-slate-700 line-through cursor-not-allowed'
+                  : isCurrent
+                  ? 'bg-pink-500 text-white shadow'
+                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+              }"
+            >${sz}</button>`;
+          }).join('');
+
+          rows.push(`
+            <div class="p-3 rounded-2xl bg-slate-950 border border-slate-800/90 flex flex-col gap-2.5">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                  <img
+                    src="${prod.images[0]}"
+                    alt="${prod.name}"
+                    width="56"
+                    height="68"
+                    loading="lazy"
+                    decoding="async"
+                    data-cart-open-detail="${prod.id}"
+                    class="w-14 h-16 rounded-xl object-cover border border-slate-800 shrink-0 cursor-pointer hover:opacity-85 transition-opacity"
+                  />
+                  <div class="min-w-0">
+                    <p
+                      data-cart-open-detail="${prod.id}"
+                      class="font-bold text-white text-xs truncate cursor-pointer hover:text-pink-400 transition-colors"
+                    >${prod.name}</p>
+                    <p class="text-[10px] text-slate-400 mt-0.5">${prod.price} c/u • <span class="font-mono text-emerald-400 font-bold">$${lineTotal.toFixed(2)}</span></p>
+                    ${
+                      exactMeas
+                        ? `<p class="text-[10px] text-slate-500 font-mono mt-0.5 truncate"><i class="fa-solid fa-ruler-combined text-pink-400/80 mr-1"></i>${exactMeas}</p>`
+                        : ''
+                    }
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  data-remove-saved="${item.key}"
+                  class="w-7 h-7 rounded-full bg-slate-900 text-slate-400 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center shrink-0 transition-colors"
+                  aria-label="Quitar prenda del carrito"
+                >
+                  <i class="fa-solid fa-trash-can text-[11px]"></i>
+                </button>
+              </div>
+              <div class="flex items-center justify-between pt-2 border-t border-slate-900 gap-2">
+                <div class="flex items-center gap-1">
+                  <span class="text-[10px] text-slate-400 font-semibold mr-1">Talla:</span>
+                  ${sizeOptionsHtml}
+                </div>
+                <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-xl px-1.5 py-0.5">
+                  <button
+                    type="button"
+                    data-cart-dec="${item.key}"
+                    class="w-6 h-6 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 flex items-center justify-center text-xs font-bold active:scale-90 transition-all"
+                    aria-label="Disminuir cantidad"
+                  >−</button>
+                  <span class="font-mono font-bold text-xs text-white min-w-[20px] text-center">${item.qty}</span>
+                  <button
+                    type="button"
+                    data-cart-inc="${item.key}"
+                    class="w-6 h-6 rounded-lg bg-slate-950 hover:bg-pink-500/20 text-pink-400 flex items-center justify-center text-xs font-bold active:scale-90 transition-all"
+                    aria-label="Aumentar cantidad"
+                  >+</button>
+                </div>
+              </div>
+            </div>
+          `);
+        });
+
+        container.innerHTML = rows.join('');
+        totalEl.textContent = `$${grandTotal.toFixed(2)} USD`;
+
+        container.querySelectorAll<HTMLButtonElement>('[data-remove-saved]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const key = btn.getAttribute('data-remove-saved');
+            if (key) removeCartItem(key);
+          });
+        });
+
+        container.querySelectorAll<HTMLButtonElement>('[data-cart-dec]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const key = btn.getAttribute('data-cart-dec');
+            if (key) changeCartItemQty(key, -1);
+          });
+        });
+
+        container.querySelectorAll<HTMLButtonElement>('[data-cart-inc]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const key = btn.getAttribute('data-cart-inc');
+            if (key) changeCartItemQty(key, 1);
+          });
+        });
+
+        container.querySelectorAll<HTMLButtonElement>('[data-cart-size-key]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const key = btn.getAttribute('data-cart-size-key');
+            const newSz = btn.getAttribute('data-cart-new-size') as SizeKey;
+            if (key && newSz) changeCartItemSize(key, newSz);
+          });
+        });
+
+        container.querySelectorAll<HTMLElement>('[data-cart-open-detail]').forEach((el) => {
+          el.addEventListener('click', () => {
+            const pid = Number(el.getAttribute('data-cart-open-detail'));
+            if (pid) {
+              closeSavedBagModal();
+              openDetailModal(pid);
+            }
+          });
+        });
+      }
+
+      // 9. Modal de Detalles (Bottom Sheet)
+      function openDetailModal(productId: number) {
+        state.activeProductId = productId;
+        const product = state.products.get(productId);
+        if (!product) return;
+
+        (document.getElementById('detail-tag-header') as HTMLElement).textContent = product.tag;
+        (document.getElementById('pdm-title') as HTMLElement).textContent = product.name;
+        (document.getElementById('pdm-category-badge') as HTMLElement).textContent = `CATEGORÍA: ${product.category.toUpperCase()}`;
+        (document.getElementById('pdm-price') as HTMLElement).textContent = product.price;
+        (document.getElementById('pdm-fit') as HTMLElement).textContent = product.fit;
+        (document.getElementById('pdm-model-info') as HTMLElement).textContent = product.modelInfo;
+        (document.getElementById('pdm-stock-badge') as HTMLElement).textContent = `Quedan ${product.stockLeft} pzs`;
+        (document.getElementById('pdm-scarcity-text') as HTMLElement).textContent = `Edición limitada: solo ${product.stockLeft} piezas disponibles en este drop.`;
+
+        const specsContainer = document.getElementById('pdm-specs-list') as HTMLElement;
+        specsContainer.innerHTML = product.specs.map((s) => `<li>${s}</li>`).join('');
+
+        const dotsContainer = document.getElementById('pdm-dots-container') as HTMLElement;
+        dotsContainer.innerHTML = product.images
+          .map(
+            (_, i) =>
+              `<div class="h-1 flex-1 rounded-full transition-all duration-300 ${
+                i === (product.currentSlide ?? 0) ? 'bg-white/90' : 'bg-white/30'
+              }" id="pdm-dot-${i}"></div>`
+          )
+          .join('');
+
+        (document.getElementById('pdm-total-counter') as HTMLElement).textContent = String(product.images.length);
+
+        updateDetailGallery();
+        syncDetailModalSizes(productId);
+        updateSavedBagUI();
+
+        detailModal.classList.remove('opacity-0', 'pointer-events-none');
+        detailModalCard.classList.remove('translate-y-full');
+      }
+
+      function closeDetailModal() {
+        detailModalCard.classList.add('translate-y-full');
+        detailModal.classList.add('opacity-0', 'pointer-events-none');
+      }
+
+      function updateDetailGallery() {
+        const product = state.products.get(state.activeProductId);
+        if (!product) return;
+
+        const current = product.currentSlide ?? 0;
+        const rawUrl = product.images[current] || product.images[0];
+        const responsive = buildResponsiveSources(rawUrl, state.saveDataActive);
+        const avifEl = document.getElementById('pdm-source-avif') as HTMLSourceElement | null;
+        const webpEl = document.getElementById('pdm-source-webp') as HTMLSourceElement | null;
+        const imgEl = document.getElementById('pdm-image') as HTMLImageElement;
+        const counterEl = document.getElementById('pdm-counter') as HTMLElement;
+        const metaBadge = document.getElementById('pdm-r2-meta-badge');
+
+        imgEl.style.opacity = '0.3';
+        setTimeout(() => {
+          delete imgEl.dataset.fallbackApplied;
+          if (avifEl) {
+            avifEl.srcset = responsive.avifSrcset;
+            avifEl.sizes = responsive.sizes;
+          }
+          if (webpEl) {
+            webpEl.srcset = responsive.webpSrcset;
+            webpEl.sizes = responsive.sizes;
+          }
+          imgEl.srcset = responsive.webpSrcset;
+          imgEl.sizes = responsive.sizes;
+          imgEl.src = responsive.fallbackSrc;
+          imgEl.alt = `${product.name} — Corte ${product.fit} (${product.tag}) — Vista detallada ${current + 1} de ${product.images.length}`;
+          imgEl.style.opacity = '1';
+          counterEl.textContent = String(current + 1);
+
+          const meta = product.imageMeta?.[current];
+          if (metaBadge) {
+            const hashShort = meta?.contentHash ? `SHA256:${meta.contentHash.slice(0, 8)}` : 'Immutable';
+            metaBadge.textContent = `R2 Edge • AVIF/WebP • ${hashShort} • EXIF=0`;
+          }
+        }, 100);
+
+        product.images.forEach((_, idx) => {
+          const dot = document.getElementById(`pdm-dot-${idx}`);
+          if (dot) {
+            dot.className = `h-1 flex-1 rounded-full transition-all duration-300 ${
+              idx === current ? 'bg-white/90' : 'bg-white/30'
+            }`;
+          }
+        });
+      }
+
+      function syncDetailModalSizes(productId: number) {
+        const product = state.products.get(productId);
+        if (!product) return;
+
+        const currentSize = product.selectedSize;
+        const detailButtons = document.querySelectorAll<HTMLButtonElement>('.pdm-size-btn');
+
+        detailButtons.forEach((btn) => {
+          const sz = btn.getAttribute('data-detail-size') as SizeKey;
+          const isAvail = product.availableSizes ? product.availableSizes[sz] !== false : true;
+          btn.disabled = !isAvail;
+          if (!isAvail) {
+            btn.className = "pdm-size-btn min-h-[44px] py-2.5 text-xs font-bold rounded-xl border border-slate-800 bg-slate-900/40 text-slate-600 line-through cursor-not-allowed transition-all";
+          } else if (sz === currentSize) {
+            btn.className = "pdm-size-btn min-h-[44px] py-2.5 text-xs font-bold rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white shadow-lg shadow-pink-500/10 transition-all focus-visible:outline-none";
+          } else {
+            btn.className = "pdm-size-btn min-h-[44px] py-2.5 text-xs font-bold rounded-xl border border-slate-700 bg-slate-800/50 text-slate-200 transition-all focus-visible:outline-none";
+          }
+        });
+
+        const statusEl = document.getElementById('pdm-size-status') as HTMLElement;
+        const measurementsEl = document.getElementById('pdm-measurements') as HTMLElement;
+        const waText = document.getElementById('pdm-btn-wa-text') as HTMLElement;
+        const sizeTableEl = document.getElementById('pdm-size-table') as HTMLElement;
+
+        if (currentSize) {
+          statusEl.textContent = `Talla ${currentSize} seleccionada`;
+          statusEl.className = "text-xs font-bold text-emerald-400";
+          measurementsEl.textContent = product.measurements[currentSize];
+          waText.textContent = `Pedir Talla ${currentSize}`;
+        } else {
+          statusEl.textContent = "Selecciona una talla";
+          statusEl.className = "text-xs font-bold text-pink-400";
+          measurementsEl.textContent = "Selecciona talla para ver cm";
+          waText.textContent = "Pedir Ahora";
+        }
+
+        if (sizeTableEl) {
+          sizeTableEl.innerHTML = ALL_SIZES.map((sz) => {
+            const isSelected = sz === currentSize;
+            return `
+              <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg ${
+                isSelected
+                  ? 'bg-pink-500/20 border border-pink-500/40 text-white font-bold'
+                  : 'bg-slate-900/70 text-slate-400'
+              }">
+                <span>Talla ${sz}</span>
+                <span>${product.measurements[sz]}</span>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      // 10. Eventos del Modal Detalle
+      document.getElementById('pdm-close-btn')?.addEventListener('click', closeDetailModal);
+      document.getElementById('pdm-save-btn')?.addEventListener('click', () => {
+        toggleSaveProduct(state.activeProductId);
+      });
+
+      document.getElementById('pdm-slide-prev')?.addEventListener('click', () => {
+        changeProductSlide(state.activeProductId, -1);
+      });
+
+      document.getElementById('pdm-slide-next')?.addEventListener('click', () => {
+        changeProductSlide(state.activeProductId, 1);
+      });
+
+      document.querySelectorAll<HTMLButtonElement>('.pdm-size-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const sz = btn.getAttribute('data-detail-size') as SizeKey;
+          selectProductSize(state.activeProductId, sz);
+        });
+      });
+
+      document.getElementById('pdm-btn-add-cart')?.addEventListener('click', () => {
+        const product = state.products.get(state.activeProductId);
+        addToCart(state.activeProductId, product?.selectedSize || null, 1);
+      });
+
+      document.getElementById('pdm-btn-wa')?.addEventListener('click', () => {
+        triggerSocial(state.activeProductId, 'whatsapp');
+      });
+
+      document.getElementById('pdm-btn-ig')?.addEventListener('click', () => {
+        triggerSocial(state.activeProductId, 'instagram');
+      });
+
+      document.getElementById('pdm-share-btn')?.addEventListener('click', async () => {
+        const product = state.products.get(state.activeProductId);
+        if (!product) return;
+        const shareText = `Mira ${product.name} (${product.price}) en URBAN_DROP`;
+
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: product.name,
+              text: shareText,
+              url: window.location.href,
+            });
+            return;
+          } catch {
+            // Continúa al fallback de portapapeles
+          }
+        }
+
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(`${shareText} — ${window.location.href}`);
+          showToast('¡Enlace de la prenda copiado al portapapeles!');
+        }
+      });
+
+      // 11. Lógica Social Commerce (WhatsApp / Instagram + Confirmación de Talla)
+      function syncSocialModalState() {
+        if (state.isMultiOrderSocial) return;
+        const product = state.products.get(state.activeProductId);
+        if (!product) return;
+
+        const size = product.selectedSize || 'S/M (Por confirmar)';
+        const exactCm = product.selectedSize ? ` [${product.measurements[product.selectedSize]}]` : '';
+        const message = `¡Hola URBAN_DROP! 🔥 Me interesa la prenda *${product.name}* (${product.price}) en Talla *${size}*${exactCm}. ¿Tienen disponibilidad para envío inmediato?`;
+
+        state.activeMessageText = message;
+
+        const previewText = document.getElementById('social-preview-text') as HTMLElement;
+        const sizeMeasEl = document.getElementById('social-size-measurements') as HTMLElement;
+        const socialSizeBtns = document.querySelectorAll<HTMLButtonElement>('.social-size-btn');
+
+        previewText.textContent = `"${message}"`;
+
+        if (sizeMeasEl) {
+          sizeMeasEl.textContent = product.selectedSize
+            ? product.measurements[product.selectedSize]
+            : 'Elige una talla arriba';
+        }
+
+        socialSizeBtns.forEach((btn) => {
+          const sz = btn.getAttribute('data-social-size');
+          if (sz === product.selectedSize) {
+            btn.className = "social-size-btn py-2 text-xs font-bold rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white transition-all";
+          } else {
+            btn.className = "social-size-btn py-2 text-xs font-bold rounded-xl border border-slate-700 bg-slate-800/50 text-slate-200 hover:border-slate-500 transition-all";
+          }
+        });
+
+        if (state.activeSocialChannel === 'whatsapp') {
+          state.activeRedirectUrl = `https://wa.me/${state.whatsappNumber}?text=${encodeURIComponent(message)}`;
+        } else {
+          state.activeRedirectUrl = state.instagramUrl;
+        }
+      }
+
+      function triggerSocial(productId: number, channel: 'whatsapp' | 'instagram') {
+        const product = state.products.get(productId);
+        if (!product) return;
+
+        state.activeProductId = productId;
+        state.activeSocialChannel = channel;
+        state.isMultiOrderSocial = false;
+
+        const socialSizeBox = document.getElementById('social-size-box') as HTMLElement;
+        const modalTitle = document.getElementById('social-modal-title') as HTMLElement;
+        const modalSubtitle = document.getElementById('social-modal-subtitle') as HTMLElement;
+        const iconBg = document.getElementById('modal-icon-bg') as HTMLElement;
+        const socialIcon = document.getElementById('modal-social-icon') as HTMLElement;
+        const confirmBtnText = document.getElementById('confirm-redirect-text') as HTMLElement;
+
+        socialSizeBox?.classList.remove('hidden');
+        syncSocialModalState();
+
+        if (channel === 'whatsapp') {
+          modalTitle.textContent = 'Iniciando Chat de WhatsApp';
+          modalSubtitle.textContent = 'Mensaje pre-estructurado listo para enviar';
+          iconBg.className = 'w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl';
+          socialIcon.className = 'fa-brands fa-whatsapp';
+          confirmBtnText.textContent = 'Abrir WhatsApp Ahora';
+        } else {
+          modalTitle.textContent = 'Iniciando DM en Instagram';
+          modalSubtitle.textContent = 'Copiamos tu mensaje para pegarlo en el DM';
+          iconBg.className = 'w-10 h-10 rounded-2xl bg-pink-500/20 text-pink-400 flex items-center justify-center text-xl';
+          socialIcon.className = 'fa-brands fa-instagram';
+          confirmBtnText.textContent = 'Copiar y Abrir Instagram DM';
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(state.activeMessageText).catch(() => {});
+          }
+        }
+
+        socialModal.classList.remove('opacity-0', 'pointer-events-none');
+        socialModalCard.classList.remove('translate-y-10');
+      }
+
+      document.querySelectorAll<HTMLButtonElement>('.social-size-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const sz = btn.getAttribute('data-social-size') as SizeKey;
+          selectProductSize(state.activeProductId, sz);
+        });
+      });
+
+      document.getElementById('copy-message-btn')?.addEventListener('click', async () => {
+        if (!state.activeMessageText || !navigator.clipboard) return;
+        await navigator.clipboard.writeText(state.activeMessageText);
+        const label = document.getElementById('copy-message-label');
+        if (label) {
+          label.textContent = '¡Copiado!';
+          setTimeout(() => {
+            label.textContent = 'Copiar texto';
+          }, 1800);
+        }
+        showToast('¡Mensaje copiado al portapapeles!');
+      });
+
+      function closeSocialModal() {
+        socialModalCard.classList.add('translate-y-10');
+        socialModal.classList.add('opacity-0', 'pointer-events-none');
+      }
+
+      document.getElementById('close-social-btn')?.addEventListener('click', closeSocialModal);
+      document.getElementById('confirm-redirect-btn')?.addEventListener('click', async () => {
+        if (state.activeSocialChannel === 'instagram' && navigator.clipboard && state.activeMessageText) {
+          await navigator.clipboard.writeText(state.activeMessageText).catch(() => {});
+        }
+        if (state.activeRedirectUrl) {
+          window.open(state.activeRedirectUrl, '_blank', 'noopener,noreferrer');
+        }
+        closeSocialModal();
+      });
+
+      // 12. Eventos del Carrito de Compras (Bolsa Drop)
+      function openSavedBagModal() {
+        renderSavedBagModalItems();
+        savedBagModal.classList.remove('opacity-0', 'pointer-events-none');
+      }
+
+      function closeSavedBagModal() {
+        savedBagModal.classList.add('opacity-0', 'pointer-events-none');
+      }
+
+      document.getElementById('btn-saved-bag')?.addEventListener('click', openSavedBagModal);
+      document.getElementById('open-bag-modal-btn')?.addEventListener('click', openSavedBagModal);
+      document.getElementById('close-bag-btn')?.addEventListener('click', closeSavedBagModal);
+      document.getElementById('clear-cart-btn')?.addEventListener('click', clearCart);
+
+      function checkoutCartByChannel(channel: 'whatsapp' | 'instagram') {
+        if (state.cartItems.size === 0) {
+          showToast('Tu carrito está vacío. Agrega al menos una prenda.');
+          return;
+        }
+
+        const { totalUnits, subtotal, shipping, grandTotal, qualifiesFreeShipping } = getCartTotals();
+        const lines: string[] = [];
+
+        state.cartItems.forEach((item) => {
+          const p = state.products.get(item.productId);
+          if (!p) return;
+          const lineTotal = p.numericPrice * item.qty;
+          const exactCm = p.measurements?.[item.size] ? ` [${p.measurements[item.size]}]` : '';
+          lines.push(`• ${item.qty}x *${p.name}* — Talla *${item.size}*${exactCm} ($${lineTotal.toFixed(2)} USD)`);
+        });
+
+        const notesInput = document.getElementById('cart-order-notes') as HTMLInputElement | null;
+        const notes = notesInput?.value ? notesInput.value.trim() : '';
+        const shippingLine = qualifiesFreeShipping
+          ? 'Envío Express: *GRATIS*'
+          : `Envío Express: *$${shipping.toFixed(2)} USD*`;
+        const notesLine = notes ? `\nNota de entrega: _${notes}_` : '';
+
+        const multiMsg = `¡Hola URBAN_DROP! 🔥 Quiero confirmar mi carrito del Drop #04 (${totalUnits} ${
+          totalUnits === 1 ? 'prenda' : 'prendas'
+        }):\n${lines.join('\n')}\nSubtotal: $${subtotal.toFixed(
+          2
+        )} USD\n${shippingLine}\nTotal a pagar: *$${grandTotal.toFixed(
+          2
+        )} USD*${notesLine}\n¿Me confirman datos de pago y envío inmediato?`;
+
+        state.isMultiOrderSocial = true;
+        state.activeSocialChannel = channel;
+        state.activeMessageText = multiMsg;
+        state.activeRedirectUrl =
+          channel === 'whatsapp'
+            ? `https://wa.me/${state.whatsappNumber}?text=${encodeURIComponent(multiMsg)}`
+            : state.instagramUrl;
+
+        closeSavedBagModal();
+
+        const socialSizeBox = document.getElementById('social-size-box') as HTMLElement;
+        const previewText = document.getElementById('social-preview-text') as HTMLElement;
+        const modalTitle = document.getElementById('social-modal-title') as HTMLElement;
+        const modalSubtitle = document.getElementById('social-modal-subtitle') as HTMLElement;
+        const iconBg = document.getElementById('modal-icon-bg') as HTMLElement;
+        const socialIcon = document.getElementById('modal-social-icon') as HTMLElement;
+        const confirmBtnText = document.getElementById('confirm-redirect-text') as HTMLElement;
+
+        socialSizeBox?.classList.add('hidden');
+        previewText.textContent = `"${multiMsg}"`;
+
+        if (channel === 'whatsapp') {
+          modalTitle.textContent = `Checkout de Carrito (${totalUnits} ${totalUnits === 1 ? 'Prenda' : 'Prendas'})`;
+          modalSubtitle.textContent = 'Orden completa lista para enviar por WhatsApp';
+          iconBg.className = 'w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl';
+          socialIcon.className = 'fa-brands fa-whatsapp';
+          confirmBtnText.textContent = 'Enviar Pedido por WhatsApp';
+        } else {
+          modalTitle.textContent = `Checkout por Instagram DM (${totalUnits} ${totalUnits === 1 ? 'Prenda' : 'Prendas'})`;
+          modalSubtitle.textContent = 'Copiamos tu carrito para pegarlo en el DM';
+          iconBg.className = 'w-10 h-10 rounded-2xl bg-pink-500/20 text-pink-400 flex items-center justify-center text-xl';
+          socialIcon.className = 'fa-brands fa-instagram';
+          confirmBtnText.textContent = 'Copiar Pedido y Abrir Instagram DM';
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(multiMsg).catch(() => {});
+          }
+        }
+
+        socialModal.classList.remove('opacity-0', 'pointer-events-none');
+        socialModalCard.classList.remove('translate-y-10');
+      }
+
+      document.getElementById('send-bag-wa-btn')?.addEventListener('click', () => {
+        checkoutCartByChannel('whatsapp');
+      });
+
+      document.getElementById('send-bag-ig-btn')?.addEventListener('click', () => {
+        checkoutCartByChannel('instagram');
+      });
+
+      loadCartFromStorage();
+      updateSavedBagUI();
+
+      // 13. Modales adicionales (UX + Cloudflare R2 Pipeline), Click en Backdrop y Teclado
+      const btnInfo = document.getElementById('btn-info-modal');
+      const closeUxBtn = document.getElementById('close-ux-btn');
+      const btnR2Modal = document.getElementById('btn-r2-pipeline-modal');
+      const closeR2ModalBtn = document.getElementById('close-r2-modal-btn');
+      const toggleSaveDataBtn = document.getElementById('toggle-save-data-btn');
+
+      btnInfo?.addEventListener('click', () => {
+        if (!isAdminSessionActive()) return;
+        uxInfoModal.classList.remove('opacity-0', 'pointer-events-none');
+      });
+
+      closeUxBtn?.addEventListener('click', () => {
+        uxInfoModal.classList.add('opacity-0', 'pointer-events-none');
+      });
+
+      btnR2Modal?.addEventListener('click', () => {
+        if (!isAdminSessionActive()) return;
+        r2PipelineModal?.classList.remove('opacity-0', 'pointer-events-none');
+      });
+
+      closeR2ModalBtn?.addEventListener('click', () => {
+        r2PipelineModal?.classList.add('opacity-0', 'pointer-events-none');
+      });
+
+      toggleSaveDataBtn?.addEventListener('click', () => {
+        state.saveDataActive = !state.saveDataActive;
+        try {
+          localStorage.setItem(SAVE_DATA_STORAGE_KEY, state.saveDataActive ? '1' : '0');
+        } catch {
+          // ignore
+        }
+        applySaveDataUI();
+        showToast(
+          state.saveDataActive
+            ? 'Directiva Save-Data activada: imágenes en modo ahorro (q=52)'
+            : 'Directiva Save-Data desactivada: máxima calidad AVIF/WebP (q=80)'
+        );
+      });
+
+      // Cerrar cualquier modal al hacer clic en el fondo oscuro (backdrop)
+      detailModal?.addEventListener('click', (e: MouseEvent) => {
+        if (e.target === detailModal) closeDetailModal();
+      });
+      socialModal?.addEventListener('click', (e: MouseEvent) => {
+        if (e.target === socialModal) closeSocialModal();
+      });
+      uxInfoModal?.addEventListener('click', (e: MouseEvent) => {
+        if (e.target === uxInfoModal) uxInfoModal.classList.add('opacity-0', 'pointer-events-none');
+      });
+      r2PipelineModal?.addEventListener('click', (e: MouseEvent) => {
+        if (e.target === r2PipelineModal) r2PipelineModal.classList.add('opacity-0', 'pointer-events-none');
+      });
+      savedBagModal?.addEventListener('click', (e: MouseEvent) => {
+        if (e.target === savedBagModal) closeSavedBagModal();
+      });
+
+      window.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          closeDetailModal();
+          closeSocialModal();
+          closeSavedBagModal();
+          uxInfoModal.classList.add('opacity-0', 'pointer-events-none');
+          r2PipelineModal?.classList.add('opacity-0', 'pointer-events-none');
+        } else if (!detailModal.classList.contains('pointer-events-none')) {
+          if (e.key === 'ArrowLeft') changeProductSlide(state.activeProductId, -1);
+          if (e.key === 'ArrowRight') changeProductSlide(state.activeProductId, 1);
+        }
+      });
+    </script>
+
+    <!-- ============================================================== -->
+    <!-- ESTILOS ESPECÍFICOS, CLS=0 Y ACELERACIÓN POR HARDWARE (GPU)    -->
+    <!-- ============================================================== -->
+    <style>
+      .font-heading {
+        font-family: 'Space Grotesk', sans-serif;
+      }
+
+      /* Reserva estricta de espacio intrínseco (CLS = 0) y Aceleración por Hardware */
+      .r2-gpu-layer {
+        aspect-ratio: 3 / 4;
+        contain: layout paint;
+        transform: translate3d(0, 0, 0);
+        backface-visibility: hidden;
+        will-change: transform;
+        touch-action: pan-y pinch-zoom;
+      }
+
+      .card-img {
+        aspect-ratio: 3 / 4;
+      }
+
+      /* Animación sutil de pulso para el CTA principal */
+      @keyframes pulse-subtle {
+        0%, 100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.02);
+        }
+      }
+
+      .btn-social-pulse {
+        animation: pulse-subtle 3s infinite ease-in-out;
+      }
+
+      /* Ocultar scrollbar nativa manteniendo el scroll táctil */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    </style>
+  </body>
+</html>
