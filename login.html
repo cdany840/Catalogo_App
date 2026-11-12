@@ -189,7 +189,7 @@
                 autocomplete="username"
                 required
                 maxlength="120"
-                placeholder="admin@urbandrop.store"
+                placeholder="admin@tu-tienda.com"
                 class="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl pl-9 pr-4 py-3 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all"
               />
             </div>
@@ -248,8 +248,8 @@
           </button>
         </form>
 
-        <!-- Panel de Pruebas Rápidas -->
-        <div class="pt-3 border-t border-slate-800/90 space-y-2.5">
+        <!-- Panel de Pruebas Rápidas (Solo Entorno Local) -->
+        <div id="dev-auth-test-panel" class="hidden pt-3 border-t border-slate-800/90 space-y-2.5">
           <div class="flex items-center justify-between text-[11px]">
             <span class="text-slate-400 font-semibold flex items-center gap-1.5">
               <i class="fa-solid fa-flask text-pink-400" aria-hidden="true"></i>
@@ -305,7 +305,7 @@
                 </span>
               </div>
               <h2 id="jwt-user-email" class="font-heading font-bold text-base text-white">
-                admin@urbandrop.store
+                Sesión verificada
               </h2>
             </div>
           </div>
@@ -371,7 +371,7 @@
             <button
               id="btn-fill-sample-prod"
               type="button"
-              class="shrink-0 py-2 px-3 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 text-pink-300 text-[11px] font-bold flex items-center gap-1.5 active:scale-95 transition-all"
+              class="hidden shrink-0 py-2 px-3 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 text-pink-300 text-[11px] font-bold items-center gap-1.5 active:scale-95 transition-all"
             >
               <i class="fa-solid fa-wand-magic-sparkles text-[10px]" aria-hidden="true"></i>
               <span>Autocompletar Demo</span>
@@ -1003,9 +1003,19 @@
         },
       };
 
-      let pendingProductImages = [
-        'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=700',
-      ];
+      const isLocalDev = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+      if (isLocalDev) {
+        document.getElementById('dev-auth-test-panel')?.classList.remove('hidden');
+        const fillProdBtn = document.getElementById('btn-fill-sample-prod');
+        if (fillProdBtn) {
+          fillProdBtn.classList.remove('hidden');
+          fillProdBtn.classList.add('flex');
+        }
+      }
+
+      let pendingProductImages = isLocalDev
+        ? ['https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=700']
+        : [];
 
       function decodeBase64Url(segment) {
         const normalized = segment.replace(/-/g, '+').replace(/_/g, '/');
@@ -1796,29 +1806,31 @@
         showToast('Medidas estándar aplicadas para la categoría');
       });
 
-      document.getElementById('btn-fill-sample-prod')?.addEventListener('click', () => {
-        document.getElementById('prod-name').value = 'Hoodie Cyber Acid 520G';
-        document.getElementById('prod-category').value = 'hoodies';
-        document.getElementById('prod-price').value = '58.00';
-        document.getElementById('prod-stock').value = '9';
-        document.getElementById('prod-tag').value = 'Drop #05 • Nuevo Alta';
-        document.getElementById('prod-fit').value = 'Ultra Boxy Drop-Shoulder';
-        document.getElementById('prod-model').value = '1.81m — Usa Talla L';
-        document.getElementById('prod-spec-1').value =
-          'Algodón French Terry 520 GSM con lavado ácido mineral';
-        document.getElementById('prod-spec-2').value =
-          'Bordado 3D de alta densidad en pecho y espalda';
-        document.getElementById('prod-spec-3').value =
-          'Costuras reforzadas y puños ribeteados de alta recuperación';
+      if (isLocalDev) {
+        document.getElementById('btn-fill-sample-prod')?.addEventListener('click', () => {
+          document.getElementById('prod-name').value = 'Hoodie Cyber Acid 520G';
+          document.getElementById('prod-category').value = 'hoodies';
+          document.getElementById('prod-price').value = '58.00';
+          document.getElementById('prod-stock').value = '9';
+          document.getElementById('prod-tag').value = 'Drop #05 • Nuevo Alta';
+          document.getElementById('prod-fit').value = 'Ultra Boxy Drop-Shoulder';
+          document.getElementById('prod-model').value = '1.81m — Usa Talla L';
+          document.getElementById('prod-spec-1').value =
+            'Algodón French Terry 520 GSM con lavado ácido mineral';
+          document.getElementById('prod-spec-2').value =
+            'Bordado 3D de alta densidad en pecho y espalda';
+          document.getElementById('prod-spec-3').value =
+            'Costuras reforzadas y puños ribeteados de alta recuperación';
 
-        pendingProductImages = [
-          'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=700',
-          'https://images.unsplash.com/photo-1578681994506-b8f463449011?auto=format&fit=crop&q=80&w=700',
-        ];
-        fillSuggestedMeasurements();
-        renderProductImagesPreview();
-        showToast('Datos de producto de muestra listos para publicar');
-      });
+          pendingProductImages = [
+            'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=700',
+            'https://images.unsplash.com/photo-1578681994506-b8f463449011?auto=format&fit=crop&q=80&w=700',
+          ];
+          fillSuggestedMeasurements();
+          renderProductImagesPreview();
+          showToast('Datos de producto de muestra listos para publicar');
+        });
+      }
 
       // ==============================================================
       // LISTAR Y CREAR PRODUCTOS EN SUPABASE POSTGRESQL
@@ -2409,20 +2421,22 @@
         }
       });
 
-      document.getElementById('btn-fill-demo')?.addEventListener('click', () => {
-        emailInput.value = 'admin@urbandrop.store';
-        passwordInput.value = 'UrbanDrop#2025!Secure';
-        passwordInput.dispatchEvent(new Event('input'));
-        errorBanner.classList.add('hidden');
-        showToast('Credenciales Admin cargadas.');
-      });
+      if (isLocalDev) {
+        document.getElementById('btn-fill-demo')?.addEventListener('click', () => {
+          emailInput.value = 'admin@urbandrop.store';
+          passwordInput.value = 'UrbanDrop#2025!Secure';
+          passwordInput.dispatchEvent(new Event('input'));
+          errorBanner.classList.add('hidden');
+          showToast('Credenciales Admin cargadas.');
+        });
 
-      document.getElementById('btn-fill-invalid')?.addEventListener('click', () => {
-        emailInput.value = 'admin@urbandrop.store';
-        passwordInput.value = 'IntentoFallido#9999';
-        passwordInput.dispatchEvent(new Event('input'));
-        showToast('Credenciales de prueba fallida cargadas.');
-      });
+        document.getElementById('btn-fill-invalid')?.addEventListener('click', () => {
+          emailInput.value = 'admin@urbandrop.store';
+          passwordInput.value = 'IntentoFallido#9999';
+          passwordInput.dispatchEvent(new Event('input'));
+          showToast('Credenciales de prueba fallida cargadas.');
+        });
+      }
 
       document.getElementById('btn-copy-jwt')?.addEventListener('click', async () => {
         const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
