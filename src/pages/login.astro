@@ -48,11 +48,11 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
     <!-- ========================================== -->
     <div
       id="auth-toast"
-      class="fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-2xl bg-slate-900/95 border border-emerald-500/40 text-emerald-400 text-xs font-bold shadow-2xl backdrop-blur-md flex items-center gap-2 opacity-0 pointer-events-none -translate-y-3 transition-all duration-300"
+      class="fixed top-16 left-1/2 -translate-x-1/2 z-[60] max-w-[calc(100vw-2rem)] px-4 py-2.5 rounded-2xl bg-slate-900/95 border border-emerald-500/40 text-emerald-400 text-xs font-bold shadow-2xl backdrop-blur-md flex items-center gap-2 opacity-0 pointer-events-none -translate-y-3 transition-all duration-300"
       role="status"
       aria-live="polite"
     >
-      <i id="auth-toast-icon" class="fa-solid fa-shield-halved text-sm" aria-hidden="true"></i>
+      <i id="auth-toast-icon" class="fa-solid fa-shield-halved text-sm shrink-0" aria-hidden="true"></i>
       <span id="auth-toast-msg">Operación verificada</span>
     </div>
 
@@ -675,15 +675,30 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
               />
             </div>
 
-            <!-- Botón Guardar y Publicar Producto -->
-            <button
-              id="btn-create-product"
-              type="submit"
-              class="w-full min-h-[46px] py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
+            <!-- Barra Flotante: Limpiar Formulario y Publicar Producto -->
+            <div
+              id="create-product-floating-actions"
+              class="sticky bottom-4 z-30 p-2.5 rounded-2xl bg-slate-900/95 backdrop-blur-md border border-slate-700/80 shadow-2xl shadow-black/70 flex items-center gap-2.5"
             >
-              <i id="create-prod-icon" class="fa-solid fa-cloud-arrow-up text-sm" aria-hidden="true"></i>
-              <span id="create-prod-text">Publicar Producto en el Catálogo</span>
-            </button>
+              <button
+                id="btn-clear-product-form"
+                type="button"
+                aria-label="Limpiar formulario"
+                class="shrink-0 min-h-[46px] px-3.5 py-3 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+              >
+                <i class="fa-solid fa-broom text-xs text-slate-300" aria-hidden="true"></i>
+                <span>Limpiar<span class="hidden sm:inline"> formulario</span></span>
+              </button>
+
+              <button
+                id="btn-create-product"
+                type="submit"
+                class="flex-1 min-h-[46px] py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-[11px] sm:text-xs leading-tight flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-95 transition-all disabled:opacity-60 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+              >
+                <i id="create-prod-icon" class="fa-solid fa-cloud-arrow-up text-sm shrink-0" aria-hidden="true"></i>
+                <span id="create-prod-text">Publicar Producto en el Catálogo</span>
+              </button>
+            </div>
           </form>
 
           <!-- Inventario en Vivo en Supabase PostgreSQL -->
@@ -1081,16 +1096,21 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
 
       let expInterval: ReturnType<typeof setInterval> | null = null;
       let lockoutInterval: ReturnType<typeof setInterval> | null = null;
+      let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
-      function showToast(msg: string) {
+      function showToast(msg: string, durationMs = 3000) {
         if (!toastEl || !toastMsgEl) return;
+        if (toastTimer !== null) {
+          clearTimeout(toastTimer);
+        }
         toastMsgEl.textContent = msg;
         toastEl.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-3');
         toastEl.classList.add('opacity-100', 'translate-y-0');
-        setTimeout(() => {
+        toastTimer = setTimeout(() => {
           toastEl.classList.add('opacity-0', 'pointer-events-none', '-translate-y-3');
           toastEl.classList.remove('opacity-100', 'translate-y-0');
-        }, 2800);
+          toastTimer = null;
+        }, durationMs);
       }
 
       function getActiveAccessToken(): string | null {
@@ -1622,6 +1642,40 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
       }
 
       const createProductForm = document.getElementById('create-product-form') as HTMLFormElement;
+      const DEFAULT_R2_TELEMETRY_STATUS = 'READY • SHA-256 + EXIF STRIP';
+      const DEFAULT_R2_TELEMETRY_DETAIL =
+        'Magic Bytes verificados • WebP/AVIF 700×933 (3:4) • Cache-Control: public, max-age=31536000, immutable';
+
+      /** Limpia por completo los campos, imágenes pendientes y telemetría R2 tras crear un producto. */
+      function resetCreateProductForm() {
+        createProductForm?.reset();
+        const stockInput = document.getElementById('prod-stock') as HTMLInputElement | null;
+        if (stockInput) stockInput.value = '8';
+
+        const fileInput = document.getElementById('prod-image-files') as HTMLInputElement | null;
+        if (fileInput) fileInput.value = '';
+
+        const imgUrlInput = document.getElementById('prod-image-url') as HTMLInputElement | null;
+        if (imgUrlInput) imgUrlInput.value = '';
+
+        pendingProductImages = [];
+        renderProductImagesPreview();
+
+        const statusEl = document.getElementById('r2-telemetry-status');
+        const detailEl = document.getElementById('r2-telemetry-detail');
+        if (statusEl) statusEl.textContent = DEFAULT_R2_TELEMETRY_STATUS;
+        if (detailEl) detailEl.textContent = DEFAULT_R2_TELEMETRY_DETAIL;
+
+        fillSuggestedMeasurements();
+      }
+
+      document.getElementById('btn-clear-product-form')?.addEventListener('click', () => {
+        const submitBtn = document.getElementById('btn-create-product') as HTMLButtonElement | null;
+        if (submitBtn?.disabled) return;
+        resetCreateProductForm();
+        showToast('Formulario limpiado.', 3000);
+      });
+
       createProductForm?.addEventListener('submit', async (e: SubmitEvent) => {
         e.preventDefault();
         const accessToken = getActiveAccessToken();
@@ -1682,11 +1736,13 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
               ];
 
         const btn = document.getElementById('btn-create-product') as HTMLButtonElement;
+        const clearBtn = document.getElementById('btn-clear-product-form') as HTMLButtonElement | null;
         const icon = document.getElementById('create-prod-icon') as HTMLElement;
         const text = document.getElementById('create-prod-text') as HTMLElement;
 
         btn.disabled = true;
-        icon.className = 'fa-solid fa-circle-notch animate-spin text-sm';
+        if (clearBtn) clearBtn.disabled = true;
+        icon.className = 'fa-solid fa-circle-notch animate-spin text-sm shrink-0';
         text.textContent = 'Guardando producto en Supabase PostgreSQL...';
 
         try {
@@ -1801,16 +1857,15 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
             body: JSON.stringify(specsRows),
           });
 
-          createProductForm.reset();
-          (document.getElementById('prod-stock') as HTMLInputElement).value = '8';
-          fillSuggestedMeasurements();
-          await loadAdminProductsList();
-          showToast(`¡Producto "${name}" dado de alta en el catálogo!`);
+          resetCreateProductForm();
+          showToast(`¡Producto "${name}" creado en el catálogo!`, 3000);
+          await loadAdminProductsList().catch(() => {});
         } catch (err: any) {
           showToast('Error al guardar el producto. Verifica tu sesión JWT.');
         } finally {
           btn.disabled = false;
-          icon.className = 'fa-solid fa-cloud-arrow-up text-sm';
+          if (clearBtn) clearBtn.disabled = false;
+          icon.className = 'fa-solid fa-cloud-arrow-up text-sm shrink-0';
           text.textContent = 'Publicar Producto en el Catálogo';
         }
       });
