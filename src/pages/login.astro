@@ -48,7 +48,7 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
     <!-- ========================================== -->
     <div
       id="auth-toast"
-      class="fixed top-16 left-1/2 -translate-x-1/2 z-[60] max-w-[calc(100vw-2rem)] px-4 py-2.5 rounded-2xl bg-slate-900/95 border border-emerald-500/40 text-emerald-400 text-xs font-bold shadow-2xl backdrop-blur-md flex items-center gap-2 opacity-0 pointer-events-none -translate-y-3 transition-all duration-300"
+      class="fixed top-16 left-1/2 -translate-x-1/2 z-[90] max-w-[calc(100vw-2rem)] px-4 py-2.5 rounded-2xl bg-slate-900/95 border border-emerald-500/40 text-emerald-400 text-xs font-bold shadow-2xl backdrop-blur-md flex items-center gap-2 opacity-0 pointer-events-none -translate-y-3 transition-all duration-300"
       role="status"
       aria-live="polite"
     >
@@ -310,407 +310,143 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
           </div>
         </div>
 
-        <!-- Navegación por Pestañas del Panel Admin -->
-        <div class="grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-slate-950 border border-slate-800" role="tablist">
-          <button
-            id="tab-btn-productos"
-            type="button"
-            role="tab"
-            aria-selected="true"
-            class="admin-tab-btn min-h-[40px] py-2 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all bg-pink-500 text-white shadow-md shadow-pink-500/20"
+        <!-- Acciones Globales de Sesión (en cabecera del panel) -->
+        <div class="flex gap-2">
+          <a
+            href="/"
+            class="flex-1 min-h-[44px] py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/80 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all"
           >
-            <i class="fa-solid fa-shirt text-xs" aria-hidden="true"></i>
-            <span>Alta Productos</span>
-          </button>
+            <i class="fa-solid fa-store text-pink-400" aria-hidden="true"></i>
+            <span>Ir al Catálogo Público</span>
+          </a>
 
           <button
-            id="tab-btn-canales"
+            id="btn-logout-jwt"
             type="button"
-            role="tab"
-            aria-selected="false"
-            class="admin-tab-btn min-h-[40px] py-2 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all text-slate-400 hover:text-white"
+            class="flex-1 min-h-[44px] py-2.5 px-3 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all"
           >
-            <i class="fa-brands fa-whatsapp text-xs" aria-hidden="true"></i>
-            <span>WhatsApp & IG</span>
-          </button>
-
-          <button
-            id="tab-btn-jwt"
-            type="button"
-            role="tab"
-            aria-selected="false"
-            class="admin-tab-btn min-h-[40px] py-2 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all text-slate-400 hover:text-white"
-          >
-            <i class="fa-solid fa-key text-xs" aria-hidden="true"></i>
-            <span>Token JWT</span>
+            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+            <span>Revocar JWT y Salir</span>
           </button>
         </div>
 
         <!-- ============================================================ -->
-        <!-- PESTAÑA 1: ALTA DE PRODUCTOS Y GESTIÓN DE CATÁLOGO           -->
+        <!-- PESTAÑA 1: GESTIÓN OPTIMIZADA DE PRODUCTOS (MOBILE-FIRST)    -->
         <!-- ============================================================ -->
-        <div id="tab-panel-productos" class="space-y-5">
-          <div class="p-3.5 rounded-2xl bg-slate-950/90 border border-slate-800 flex items-center justify-between gap-2">
-            <div>
-              <h3 class="font-heading font-bold text-sm text-white flex items-center gap-1.5">
-                <i class="fa-solid fa-plus-circle text-pink-400" aria-hidden="true"></i>
-                <span>Dar de Alta Nuevo Producto</span>
-              </h3>
-              <p class="text-[11px] text-slate-400">
-                Guarda directo en Supabase PostgreSQL (<code class="text-slate-300">productos</code>, <code class="text-slate-300">imagenes</code>, <code class="text-slate-300">tallas</code> y <code class="text-slate-300">especificaciones</code>)
-              </p>
-            </div>
-            {isDev && (
+        <div id="tab-panel-productos" class="space-y-4 pb-16">
+          <!-- Cabecera de Catálogo + Buscador + Filtro por Talla -->
+          <div class="space-y-3 rounded-2xl bg-slate-950/90 border border-slate-800 p-3.5">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <h3 class="font-heading font-bold text-base text-white">Catálogo</h3>
+                <span
+                  id="admin-products-count"
+                  class="rounded-full bg-pink-500/15 border border-pink-500/30 px-2.5 py-0.5 text-[11px] font-mono font-bold text-pink-300 tabular-nums"
+                >
+                  0
+                </span>
+              </div>
+
               <button
-                id="btn-fill-sample-prod"
+                id="btn-refresh-products"
                 type="button"
-                class="shrink-0 py-2 px-3 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 text-pink-300 text-[11px] font-bold flex items-center gap-1.5 active:scale-95 transition-all"
+                aria-label="Actualizar lista de productos"
+                class="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3 text-[11px] font-semibold text-slate-300 transition hover:border-slate-700 hover:text-white active:scale-95"
               >
-                <i class="fa-solid fa-wand-magic-sparkles text-[10px]" aria-hidden="true"></i>
-                <span>Autocompletar Demo</span>
+                <i id="refresh-products-icon" class="fa-solid fa-rotate text-[11px] text-emerald-400" aria-hidden="true"></i>
+                <span>Actualizar</span>
               </button>
-            )}
-          </div>
-
-          <form id="create-product-form" class="space-y-4" novalidate>
-            <!-- Nombre y Categoría -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div class="sm:col-span-2 space-y-1">
-                <label for="prod-name" class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                  Nombre de la Prenda *
-                </label>
-                <input
-                  id="prod-name"
-                  type="text"
-                  required
-                  maxlength="90"
-                  placeholder="Ej. Hoodie Cyber Acid 520G"
-                  class="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none"
-                />
-              </div>
-
-              <div class="space-y-1">
-                <label for="prod-category" class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                  Categoría *
-                </label>
-                <select
-                  id="prod-category"
-                  class="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none"
-                >
-                  <option value="hoodies">Hoodies</option>
-                  <option value="pantalones">Pantalones</option>
-                  <option value="t-shirts">T-Shirts</option>
-                  <option value="chaquetas">Chaquetas</option>
-                </select>
-              </div>
             </div>
 
-            <!-- Precio, Stock y Etiqueta -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <div class="space-y-1">
-                <label for="prod-price" class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                  Precio (USD) *
-                </label>
-                <div class="relative flex items-center">
-                  <span class="absolute left-3 text-xs font-mono text-emerald-400">$</span>
-                  <input
-                    id="prod-price"
-                    type="number"
-                    step="0.01"
-                    min="1"
-                    required
-                    placeholder="58.00"
-                    class="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl pl-7 pr-3 py-2.5 text-xs text-white font-mono placeholder:text-slate-600 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div class="space-y-1">
-                <label for="prod-stock" class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                  Stock Total *
-                </label>
-                <input
-                  id="prod-stock"
-                  type="number"
-                  min="1"
-                  max="999"
-                  required
-                  value="8"
-                  class="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono focus:outline-none"
-                />
-              </div>
-
-              <div class="col-span-2 sm:col-span-1 space-y-1">
-                <label for="prod-tag" class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                  Etiqueta / Drop Tag *
-                </label>
-                <input
-                  id="prod-tag"
-                  type="text"
-                  required
-                  placeholder="Nuevo Drop • Limitado"
-                  class="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <!-- Corte / Fit e Información de Modelo -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div class="space-y-1">
-                <label for="prod-fit" class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                  Corte / Fit *
-                </label>
-                <input
-                  id="prod-fit"
-                  type="text"
-                  required
-                  placeholder="Ej. Oversized Boxy Fit"
-                  class="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none"
-                />
-              </div>
-
-              <div class="space-y-1">
-                <label for="prod-model" class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                  Referencia del Modelo *
-                </label>
-                <input
-                  id="prod-model"
-                  type="text"
-                  required
-                  placeholder="Ej. 1.80m — Usa Talla L"
-                  class="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <!-- Carga de Imágenes (Pipeline Desacoplado Cloudflare R2 + Presigned S3 URL + Magic Bytes + EXIF Strip) -->
-            <div class="p-3.5 rounded-2xl bg-slate-950 border border-orange-500/30 space-y-3">
-              <div class="flex items-center justify-between flex-wrap gap-1.5">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
-                  <i class="fa-solid fa-cloud-bolt text-orange-400" aria-hidden="true"></i>
-                  <span>Cloudflare R2 Image Ingestion Pipeline (3:4) *</span>
-                </span>
-                <span id="prod-images-count" class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                  1 activo R2 listo
-                </span>
-              </div>
-
-              <!-- Telemetría en vivo del Pipeline R2 -->
-              <div id="r2-upload-telemetry" class="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-[10px] font-mono text-slate-300 space-y-1">
-                <div class="flex items-center justify-between">
-                  <span class="text-orange-400 font-bold">● S3 Presigned URL (/functions/v1/r2-presigned-upload)</span>
-                  <span id="r2-telemetry-status" class="text-emerald-400">READY • SHA-256 + EXIF STRIP</span>
-                </div>
-                <p id="r2-telemetry-detail" class="text-slate-400 truncate">
-                  Magic Bytes verificados • WebP/AVIF 700×933 (3:4) • Cache-Control: public, max-age=31536000, immutable
-                </p>
-              </div>
-
-              <!-- Subir archivo desde dispositivo -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <label
-                  for="prod-image-files"
-                  class="cursor-pointer min-h-[44px] p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-dashed border-orange-500/50 text-orange-300 text-xs font-semibold flex items-center justify-center gap-2 transition-all"
-                >
-                  <i id="upload-spinner-icon" class="fa-solid fa-cloud-arrow-up text-sm" aria-hidden="true"></i>
-                  <span id="upload-btn-label">Ingestar a Cloudflare R2 (Local)</span>
-                  <input
-                    id="prod-image-files"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/avif,image/svg+xml"
-                    multiple
-                    class="hidden"
-                  />
-                </label>
-
-                <!-- Agregar por URL directa -->
-                <div class="flex gap-1.5">
-                  <input
-                    id="prod-image-url"
-                    type="url"
-                    placeholder="O pega URL CDN/R2 (https://...)"
-                    class="flex-1 bg-slate-900 border border-slate-800 focus:border-orange-500 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none"
-                  />
-                  <button
-                    id="btn-add-img-url"
-                    type="button"
-                    class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs shrink-0 transition-colors"
-                    title="Añadir URL a la galería R2"
-                  >
-                    <i class="fa-solid fa-plus" aria-hidden="true"></i>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Previsualización de imágenes cargadas -->
-              <div id="prod-images-preview" class="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-1"></div>
-            </div>
-
-            <!-- Selección de Tallas Disponibles y Medidas en cm -->
-            <div class="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
-              <div class="flex items-center justify-between">
-                <div>
-                  <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300 block">
-                    Tallas Disponibles y Medidas Exactas (cm)
-                  </span>
-                  <span class="text-[10px] text-slate-500">
-                    Marca las tallas con stock activo; las desmarcadas aparecerán agotadas
-                  </span>
-                </div>
-                <button
-                  id="btn-autofill-cm"
-                  type="button"
-                  class="text-[10px] font-mono text-pink-400 hover:text-pink-300 underline"
-                >
-                  Sugerir cm por categoría
-                </button>
-              </div>
-
-              <div class="space-y-2">
-                <!-- Talla S -->
-                <div class="flex items-center gap-2.5 bg-slate-900/90 p-2 rounded-xl border border-slate-800">
-                  <label class="flex items-center gap-2 cursor-pointer min-w-[72px]">
-                    <input
-                      id="size-active-S"
-                      type="checkbox"
-                      checked
-                      class="w-4 h-4 accent-pink-500 rounded cursor-pointer"
-                    />
-                    <span class="font-mono font-bold text-xs text-white">Talla S</span>
-                  </label>
-                  <input
-                    id="size-cm-S"
-                    type="text"
-                    value="Pecho: 58cm | Largo: 68cm"
-                    placeholder="Medidas en cm para S"
-                    class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] font-mono text-slate-200 focus:border-pink-500 focus:outline-none"
-                  />
-                </div>
-
-                <!-- Talla M -->
-                <div class="flex items-center gap-2.5 bg-slate-900/90 p-2 rounded-xl border border-slate-800">
-                  <label class="flex items-center gap-2 cursor-pointer min-w-[72px]">
-                    <input
-                      id="size-active-M"
-                      type="checkbox"
-                      checked
-                      class="w-4 h-4 accent-pink-500 rounded cursor-pointer"
-                    />
-                    <span class="font-mono font-bold text-xs text-white">Talla M</span>
-                  </label>
-                  <input
-                    id="size-cm-M"
-                    type="text"
-                    value="Pecho: 61cm | Largo: 71cm"
-                    placeholder="Medidas en cm para M"
-                    class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] font-mono text-slate-200 focus:border-pink-500 focus:outline-none"
-                  />
-                </div>
-
-                <!-- Talla L -->
-                <div class="flex items-center gap-2.5 bg-slate-900/90 p-2 rounded-xl border border-slate-800">
-                  <label class="flex items-center gap-2 cursor-pointer min-w-[72px]">
-                    <input
-                      id="size-active-L"
-                      type="checkbox"
-                      checked
-                      class="w-4 h-4 accent-pink-500 rounded cursor-pointer"
-                    />
-                    <span class="font-mono font-bold text-xs text-white">Talla L</span>
-                  </label>
-                  <input
-                    id="size-cm-L"
-                    type="text"
-                    value="Pecho: 64cm | Largo: 74cm"
-                    placeholder="Medidas en cm para L"
-                    class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] font-mono text-slate-200 focus:border-pink-500 focus:outline-none"
-                  />
-                </div>
-
-                <!-- Talla XL -->
-                <div class="flex items-center gap-2.5 bg-slate-900/90 p-2 rounded-xl border border-slate-800">
-                  <label class="flex items-center gap-2 cursor-pointer min-w-[72px]">
-                    <input
-                      id="size-active-XL"
-                      type="checkbox"
-                      checked
-                      class="w-4 h-4 accent-pink-500 rounded cursor-pointer"
-                    />
-                    <span class="font-mono font-bold text-xs text-white">Talla XL</span>
-                  </label>
-                  <input
-                    id="size-cm-XL"
-                    type="text"
-                    value="Pecho: 67cm | Largo: 77cm"
-                    placeholder="Medidas en cm para XL"
-                    class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] font-mono text-slate-200 focus:border-pink-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- Especificaciones de Material y Confección -->
-            <div class="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-2.5">
-              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                <i class="fa-solid fa-layer-group text-purple-400" aria-hidden="true"></i>
-                <span>Especificaciones Técnicas y Materiales</span>
-              </span>
+            <!-- Buscador por nombre, categoría, fit o material (Alto 48px) -->
+            <div class="relative">
+              <i class="fa-solid fa-magnifying-glass pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-xs text-slate-400" aria-hidden="true"></i>
               <input
-                id="prod-spec-1"
-                type="text"
-                placeholder="1. Ej. Algodón French Terry 500 GSM de alto gramaje"
-                class="w-full bg-slate-900 border border-slate-800 focus:border-pink-500 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none"
+                id="admin-search-input"
+                type="search"
+                placeholder="Buscar por marca, categoría o material..."
+                class="h-12 w-full rounded-xl border border-slate-800 bg-slate-900 pr-11 pl-10 text-xs text-white placeholder:text-slate-500 focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 focus:outline-none"
               />
-              <input
-                id="prod-spec-2"
-                type="text"
-                placeholder="2. Ej. Costuras reforzadas doble aguja y caída de hombro"
-                class="w-full bg-slate-900 border border-slate-800 focus:border-pink-500 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none"
-              />
-              <input
-                id="prod-spec-3"
-                type="text"
-                placeholder="3. Ej. Lavado ácido artesanal pre-encogido"
-                class="w-full bg-slate-900 border border-slate-800 focus:border-pink-500 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none"
-              />
+              <button
+                type="button"
+                id="admin-clear-search-btn"
+                aria-label="Limpiar búsqueda"
+                class="hidden absolute top-1/2 right-1 h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:text-white"
+              >
+                <i class="fa-solid fa-xmark text-sm" aria-hidden="true"></i>
+              </button>
             </div>
 
-            <!-- Barra Flotante: Limpiar Formulario y Publicar Producto -->
+            <!-- Chips de filtro por talla (Área táctil mínima 44x44px) -->
             <div
-              id="create-product-floating-actions"
-              class="sticky bottom-4 z-30 p-2.5 rounded-2xl bg-slate-900/95 backdrop-blur-md border border-slate-700/80 shadow-2xl shadow-black/70 flex items-center gap-2.5"
+              id="admin-size-filters-bar"
+              class="no-scrollbar flex items-center gap-2 overflow-x-auto pb-0.5"
+              role="tablist"
+              aria-label="Filtrar catálogo por talla"
             >
               <button
-                id="btn-clear-product-form"
                 type="button"
-                aria-label="Limpiar formulario"
-                class="shrink-0 min-h-[46px] px-3.5 py-3 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                data-size-filter="ALL"
+                class="admin-size-filter-chip min-h-[44px] shrink-0 rounded-xl bg-pink-500 px-4 text-xs font-bold text-white shadow-md shadow-pink-500/20 transition active:scale-95"
               >
-                <i class="fa-solid fa-broom text-xs text-slate-300" aria-hidden="true"></i>
-                <span>Limpiar<span class="hidden sm:inline"> formulario</span></span>
+                Todas
               </button>
-
-              <button
-                id="btn-create-product"
-                type="submit"
-                class="flex-1 min-h-[46px] py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-[11px] sm:text-xs leading-tight flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-95 transition-all disabled:opacity-60 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
-              >
-                <i id="create-prod-icon" class="fa-solid fa-cloud-arrow-up text-sm shrink-0" aria-hidden="true"></i>
-                <span id="create-prod-text">Publicar Producto en el Catálogo</span>
-              </button>
+              {(['S', 'M', 'L', 'XL'] as const).map((talla) => (
+                <button
+                  type="button"
+                  data-size-filter={talla}
+                  class="admin-size-filter-chip min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-slate-800 bg-slate-900 px-3 text-xs font-bold text-slate-300 transition hover:bg-slate-800 hover:text-white active:scale-95"
+                >
+                  {talla}
+                </button>
+              ))}
             </div>
-          </form>
+          </div>
 
-          <!-- Inventario en Vivo en Supabase PostgreSQL -->
-          <div class="pt-3 border-t border-slate-800 space-y-2.5">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                <i class="fa-solid fa-boxes-stacked text-emerald-400" aria-hidden="true"></i>
-                <span>Productos Activos en Base de Datos</span>
-              </span>
-              <span id="admin-products-count" class="text-[10px] font-mono text-slate-400">Cargando...</span>
+          <!-- Estado de Carga (Skeletons iniciales) -->
+          <div id="admin-loading-skeletons" class="space-y-2.5">
+            {[1, 2, 3].map(() => (
+              <div class="flex items-center gap-3.5 rounded-2xl border border-slate-800 bg-slate-950/90 p-3">
+                <div class="h-[76px] w-[76px] shrink-0 animate-pulse rounded-xl bg-slate-800"></div>
+                <div class="flex-1 space-y-2.5">
+                  <div class="flex justify-between gap-2">
+                    <div class="h-4 w-32 animate-pulse rounded bg-slate-800"></div>
+                    <div class="h-4 w-16 animate-pulse rounded bg-slate-800"></div>
+                  </div>
+                  <div class="h-3 w-28 animate-pulse rounded bg-slate-900"></div>
+                  <div class="flex gap-1.5 pt-1">
+                    <div class="h-5 w-6 animate-pulse rounded bg-slate-800"></div>
+                    <div class="h-5 w-6 animate-pulse rounded bg-slate-800"></div>
+                    <div class="h-5 w-6 animate-pulse rounded bg-slate-800"></div>
+                    <div class="h-5 w-6 animate-pulse rounded bg-slate-800"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <!-- Lista principal de tarjetas de productos -->
+          <div id="admin-products-list" class="hidden space-y-2.5" aria-live="polite"></div>
+
+          <!-- Estado Vacío (Sin productos o sin coincidencias) -->
+          <div id="admin-empty-state" class="hidden flex-col items-center justify-center rounded-2xl border border-dashed border-slate-800 bg-slate-950/60 px-6 py-12 text-center">
+            <div class="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 border border-slate-800 text-pink-400">
+              <i class="fa-solid fa-shirt text-xl" aria-hidden="true"></i>
             </div>
-            <div id="admin-products-list" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+            <h4 id="admin-empty-title" class="font-heading text-sm font-bold text-white">
+              Aún no tienes prendas en tu catálogo
+            </h4>
+            <p id="admin-empty-subtitle" class="mt-1 max-w-xs text-xs leading-relaxed text-slate-400">
+              Agrega tu primer producto con fotos, categoría, precio y tallas disponibles.
+            </p>
+            <button
+              type="button"
+              id="admin-empty-action-btn"
+              class="mt-5 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-pink-500 hover:bg-pink-600 px-5 text-xs font-bold text-white shadow-lg shadow-pink-500/20 transition active:scale-95"
+            >
+              <i class="fa-solid fa-plus text-xs" aria-hidden="true"></i>
+              <span id="admin-empty-action-label">Agregar primer producto</span>
+            </button>
           </div>
         </div>
 
@@ -889,25 +625,6 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
           </div>
         </div>
 
-        <!-- Acciones Globales de Sesión -->
-        <div class="pt-3 border-t border-slate-800 flex gap-2">
-          <a
-            href="/"
-            class="flex-1 min-h-[44px] py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all"
-          >
-            <i class="fa-solid fa-store text-pink-400" aria-hidden="true"></i>
-            <span>Ir al Catálogo Público</span>
-          </a>
-
-          <button
-            id="btn-logout-jwt"
-            type="button"
-            class="flex-1 min-h-[44px] py-3 px-4 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all"
-          >
-            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-            <span>Revocar JWT y Salir</span>
-          </button>
-        </div>
       </section>
 
       <!-- ============================================================== -->
@@ -942,6 +659,588 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
         </div>
       </section>
     </main>
+
+    <!-- ============================================================== -->
+    <!-- BOTÓN FLOTANTE (FAB) PARA CREAR PRODUCTO (ZONA PULGAR DERECHO) -->
+    <!-- ============================================================== -->
+    <button
+      type="button"
+      id="fab-create-product-btn"
+      aria-label="Crear nuevo producto"
+      class="hidden fixed right-4 bottom-20 z-30 h-14 items-center gap-2 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-5 text-sm font-bold text-white shadow-xl shadow-pink-500/30 transition-all duration-200 hover:from-pink-400 hover:to-purple-400 active:scale-95 sm:right-[calc(50%-17rem)]"
+    >
+      <i class="fa-solid fa-plus text-base shrink-0" aria-hidden="true"></i>
+      <span id="fab-create-label" class="whitespace-nowrap">Nuevo</span>
+    </button>
+
+    <!-- ============================================================== -->
+    <!-- BARRA FIJA INFERIOR DE NAVEGACIÓN (ALTA / WHATSAPP / TOKEN JWT)-->
+    <!-- ============================================================== -->
+    <nav
+      id="admin-bottom-tabs"
+      aria-label="Navegación del panel administrativo"
+      class="hidden fixed bottom-0 inset-x-0 z-30 border-t border-slate-800 bg-slate-950/95 px-3 py-2 backdrop-blur-md"
+    >
+      <div class="mx-auto grid max-w-xl grid-cols-3 gap-1.5" role="tablist">
+        <button
+          id="tab-btn-productos"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          class="admin-tab-btn min-h-[44px] py-2 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all bg-pink-500 text-white shadow-md shadow-pink-500/20"
+        >
+          <i class="fa-solid fa-shirt text-xs" aria-hidden="true"></i>
+          <span>Alta Productos</span>
+        </button>
+
+        <button
+          id="tab-btn-canales"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          class="admin-tab-btn min-h-[44px] py-2 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all text-slate-400 hover:text-white"
+        >
+          <i class="fa-brands fa-whatsapp text-xs" aria-hidden="true"></i>
+          <span>WhatsApp & IG</span>
+        </button>
+
+        <button
+          id="tab-btn-jwt"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          class="admin-tab-btn min-h-[44px] py-2 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all text-slate-400 hover:text-white"
+        >
+          <i class="fa-solid fa-key text-xs" aria-hidden="true"></i>
+          <span>Token JWT</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- ============================================================== -->
+    <!-- MODAL 1: DETALLE DE PRODUCTO (LECTURA SEGURA ANTES DE EDITAR)  -->
+    <!-- ============================================================== -->
+    <div
+      id="admin-detail-modal"
+      class="fixed inset-0 z-40 hidden items-end justify-center bg-slate-950/80 backdrop-blur-sm sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="admin-detail-name"
+    >
+      <div class="flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl border border-slate-800 bg-slate-900 text-slate-100 shadow-2xl sm:rounded-3xl">
+        <!-- Cabecera -->
+        <div class="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+          <span class="text-[11px] font-mono font-bold tracking-wider text-slate-400 uppercase">Detalle de prenda</span>
+          <button
+            type="button"
+            id="close-admin-detail-btn"
+            aria-label="Cerrar detalle"
+            class="flex h-11 w-11 items-center justify-center rounded-full bg-slate-800 text-slate-300 transition hover:bg-slate-700 hover:text-white active:scale-95"
+          >
+            <i class="fa-solid fa-xmark text-base" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <!-- Contenido scrolleable -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-4">
+          <div class="relative aspect-square max-h-72 w-full overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
+            <img
+              id="admin-detail-main-img"
+              src=""
+              alt=""
+              class="h-full w-full object-cover"
+            />
+            <div id="admin-detail-no-img" class="hidden h-full w-full flex-col items-center justify-center text-slate-500">
+              <i class="fa-regular fa-image text-3xl" aria-hidden="true"></i>
+              <span class="mt-2 text-xs font-medium">Sin fotografía</span>
+            </div>
+          </div>
+
+          <!-- Tira de miniaturas si hay más de 1 foto -->
+          <div id="admin-detail-thumbs" class="no-scrollbar flex gap-2 overflow-x-auto pb-1"></div>
+
+          <!-- Marca, Categoría y Precio -->
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <h2 id="admin-detail-name" class="font-heading text-lg font-bold text-white leading-tight"></h2>
+              <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                <span id="admin-detail-category" class="inline-block rounded-lg bg-pink-500/15 border border-pink-500/30 px-2.5 py-1 text-[11px] font-bold text-pink-300"></span>
+              </div>
+            </div>
+            <p id="admin-detail-price" class="shrink-0 font-mono text-xl font-bold text-emerald-400 tabular-nums"></p>
+          </div>
+
+          <!-- Tallas disponibles -->
+          <div>
+            <span class="block text-[11px] font-mono font-bold tracking-wider text-slate-400 uppercase">Tallas disponibles</span>
+            <div id="admin-detail-sizes" class="mt-2 grid grid-cols-4 gap-2"></div>
+            <div id="admin-detail-measurements" class="mt-2.5 space-y-1 text-[11px] font-mono text-slate-400"></div>
+          </div>
+
+          <!-- Especificaciones / Material -->
+          <div id="admin-detail-specs-wrapper" class="rounded-2xl border border-slate-800 bg-slate-950/80 p-3.5">
+            <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Material y Especificaciones</span>
+            <ul id="admin-detail-specs" class="mt-1.5 space-y-1 text-xs leading-relaxed text-slate-300"></ul>
+          </div>
+        </div>
+
+        <!-- Acciones principales fijas al fondo: Eliminar y Editar producto -->
+        <div class="border-t border-slate-800 bg-slate-900 p-4 flex items-center gap-2.5">
+          <button
+            type="button"
+            id="admin-detail-delete-btn"
+            class="flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/15 hover:bg-red-500/25 px-4 text-sm font-bold text-red-400 transition active:scale-[0.99]"
+            aria-label="Borrar producto"
+          >
+            <i class="fa-solid fa-trash-can text-xs" aria-hidden="true"></i>
+            <span>Borrar</span>
+          </button>
+          <button
+            type="button"
+            id="admin-detail-edit-btn"
+            class="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-pink-500 hover:bg-pink-600 px-5 text-sm font-bold text-white shadow-lg shadow-pink-500/20 transition active:scale-[0.99]"
+          >
+            <i class="fa-solid fa-pen text-xs" aria-hidden="true"></i>
+            <span>Modificar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- MODAL 2: FORMULARIO CREAR / EDITAR PRODUCTO (PANTALLA COMPLETA)-->
+    <!-- ============================================================== -->
+    <div
+      id="admin-form-modal"
+      class="fixed inset-0 z-50 hidden flex-col bg-slate-950 text-slate-100 sm:mx-auto sm:max-w-xl sm:border-x sm:border-slate-800"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="product-form-modal-title"
+    >
+      <!-- Cabecera fija con Título -->
+      <header class="flex h-14 shrink-0 items-center justify-center border-b border-slate-800 bg-slate-900/95 px-4 backdrop-blur-md">
+        <h2 id="product-form-modal-title" class="font-heading text-base font-bold text-white">Nuevo producto</h2>
+      </header>
+
+      <!-- Cuerpo del formulario optimizado para reducir escritura en móvil -->
+      <form id="create-product-form" class="flex-1 space-y-4 overflow-y-auto p-4 pb-6" novalidate>
+        <input type="hidden" id="prod-editing-id" value="" />
+
+        {isDev && (
+          <div class="flex items-center justify-between rounded-2xl border border-pink-500/20 bg-pink-500/5 px-3.5 py-2.5">
+            <span class="text-[11px] font-medium text-slate-300">Modo desarrollo: llena datos de prueba en un toque</span>
+            <button
+              id="btn-fill-sample-prod"
+              type="button"
+              class="shrink-0 rounded-xl bg-pink-500/20 hover:bg-pink-500/30 border border-pink-500/30 px-3 py-1.5 text-[11px] font-bold text-pink-300 flex items-center gap-1.5 active:scale-95 transition-all"
+            >
+              <i class="fa-solid fa-wand-magic-sparkles text-[10px]" aria-hidden="true"></i>
+              <span>Demo</span>
+            </button>
+          </div>
+        )}
+
+        <!-- Bloque 1: Imágenes del producto (Pipeline Cloudflare R2) -->
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+              <i class="fa-solid fa-cloud-bolt text-orange-400" aria-hidden="true"></i>
+              <span>Imágenes (R2 Pipeline) *</span>
+            </label>
+            <span id="prod-images-count" class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              0 fotos
+            </span>
+          </div>
+
+          <!-- Zona táctil para subir fotos desde galería/cámara -->
+          <label
+            for="prod-image-files"
+            class="flex min-h-[96px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-orange-500/40 bg-slate-950 px-4 py-4 text-center transition hover:border-orange-400 hover:bg-slate-900"
+          >
+            <i id="upload-spinner-icon" class="fa-solid fa-camera text-xl text-orange-400" aria-hidden="true"></i>
+            <span id="upload-btn-label" class="mt-2 text-xs font-bold text-white">Toca para subir fotos o usar cámara</span>
+            <span class="mt-0.5 text-[10px] font-mono text-slate-400">Magic Bytes + EXIF Strip + WebP/R2</span>
+            <input
+              id="prod-image-files"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/avif,image/svg+xml"
+              multiple
+              class="sr-only"
+            />
+          </label>
+
+          <!-- Agregar por URL directa -->
+          <div class="flex gap-2">
+            <input
+              id="prod-image-url"
+              type="url"
+              placeholder="O pega URL de imagen (https://...)"
+              class="h-11 flex-1 rounded-xl border border-slate-800 bg-slate-950 px-3 text-xs text-white placeholder:text-slate-500 focus:border-orange-500 focus:outline-none"
+            />
+            <button
+              id="btn-add-img-url"
+              type="button"
+              class="h-11 shrink-0 rounded-xl border border-slate-700 bg-slate-800 px-3.5 text-xs font-bold text-emerald-400 hover:bg-slate-700 active:scale-95 transition-colors"
+              title="Añadir URL a la galería"
+            >
+              <i class="fa-solid fa-plus" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          <!-- Telemetría compacta R2 -->
+          <div id="r2-upload-telemetry" class="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-[10px] font-mono text-slate-400 flex items-center justify-between gap-2">
+            <span id="r2-telemetry-status" class="text-emerald-400 truncate">READY • SHA-256 + EXIF STRIP</span>
+            <span id="r2-telemetry-detail" class="hidden sm:inline truncate text-slate-500">700×933 • Immutable</span>
+          </div>
+
+          <!-- Previsualización de imágenes cargadas -->
+          <div id="prod-images-preview" class="grid grid-cols-3 sm:grid-cols-4 gap-2"></div>
+        </div>
+
+        <!-- Bloque 2: Marca, Categoría (creación rápida inline) y Precio -->
+        <div class="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/90 p-4">
+          <!-- Marca + Creación rápida inline -->
+          <div>
+            <label for="prod-marca" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-300">
+              Marca <span class="text-pink-500">*</span>
+            </label>
+            <div class="flex items-center gap-2">
+              <div class="relative flex-1">
+                <select
+                  id="prod-marca"
+                  required
+                  class="h-12 w-full appearance-none rounded-xl border border-slate-800 bg-slate-950 py-3 pr-10 pl-3.5 text-sm leading-5 text-white focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 focus:outline-none"
+                ></select>
+                <i class="fa-solid fa-chevron-down pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-xs text-slate-400" aria-hidden="true"></i>
+              </div>
+              <button
+                type="button"
+                id="toggle-new-brand-btn"
+                aria-expanded="false"
+                aria-controls="new-brand-box"
+                class="inline-flex h-12 shrink-0 items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3.5 text-xs font-bold text-slate-200 transition hover:bg-slate-700 hover:text-white active:scale-95"
+              >
+                <i class="fa-solid fa-plus text-xs text-pink-400" aria-hidden="true"></i>
+                <span>Nueva</span>
+              </button>
+            </div>
+
+            <!-- Panel desplegable inline para crear nueva marca -->
+            <div id="new-brand-box" class="mt-2.5 hidden rounded-xl border border-slate-700 bg-slate-950 p-3">
+              <label for="new-brand-input" class="mb-1.5 block text-xs font-semibold text-slate-300">
+                Nombre de la nueva marca
+              </label>
+              <div class="flex flex-col gap-2 sm:flex-row">
+                <input
+                  id="new-brand-input"
+                  type="text"
+                  autocapitalize="words"
+                  placeholder="Ej. URBAN_DROP, Nike, Levi's..."
+                  class="h-11 flex-1 rounded-xl border border-slate-800 bg-slate-900 px-3 text-xs text-white placeholder:text-slate-500 focus:border-pink-500 focus:outline-none"
+                />
+                <div class="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    id="cancel-new-brand-btn"
+                    class="min-h-[40px] rounded-xl border border-slate-700 bg-slate-800 px-3 text-xs font-semibold text-slate-300 hover:text-white active:scale-95"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    id="save-new-brand-btn"
+                    class="min-h-[40px] rounded-xl bg-pink-500 hover:bg-pink-600 px-4 text-xs font-bold text-white active:scale-95"
+                  >
+                    Agregar
+                  </button>
+                </div>
+              </div>
+            </div>
+            <p id="error-prod-marca" class="mt-1 hidden text-xs font-medium text-red-400">Selecciona o crea una marca.</p>
+          </div>
+
+          <!-- Categoría + Creación rápida inline -->
+          <div>
+            <label for="prod-category" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-300">
+              Categoría <span class="text-pink-500">*</span>
+            </label>
+            <div class="flex items-center gap-2">
+              <div class="relative flex-1">
+                <select
+                  id="prod-category"
+                  required
+                  class="h-12 w-full appearance-none rounded-xl border border-slate-800 bg-slate-950 py-3 pr-10 pl-3.5 text-sm leading-5 text-white focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 focus:outline-none"
+                >
+                  <option value="hoodies">Hoodies</option>
+                  <option value="pantalones">Pantalones</option>
+                  <option value="t-shirts">T-Shirts</option>
+                  <option value="chaquetas">Chaquetas</option>
+                </select>
+                <i class="fa-solid fa-chevron-down pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-xs text-slate-400" aria-hidden="true"></i>
+              </div>
+              <button
+                type="button"
+                id="toggle-new-category-btn"
+                aria-expanded="false"
+                aria-controls="new-category-box"
+                class="inline-flex h-12 shrink-0 items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3.5 text-xs font-bold text-slate-200 transition hover:bg-slate-700 hover:text-white active:scale-95"
+              >
+                <i class="fa-solid fa-plus text-xs text-pink-400" aria-hidden="true"></i>
+                <span>Nueva</span>
+              </button>
+            </div>
+
+            <!-- Panel desplegable inline para crear nueva categoría -->
+            <div id="new-category-box" class="mt-2.5 hidden rounded-xl border border-slate-700 bg-slate-950 p-3">
+              <label for="new-category-input" class="mb-1.5 block text-xs font-semibold text-slate-300">
+                Nombre de la nueva categoría
+              </label>
+              <div class="flex flex-col gap-2 sm:flex-row">
+                <input
+                  id="new-category-input"
+                  type="text"
+                  autocapitalize="words"
+                  placeholder="Ej. Gorras, Accesorios..."
+                  class="h-11 flex-1 rounded-xl border border-slate-800 bg-slate-900 px-3 text-xs text-white placeholder:text-slate-500 focus:border-pink-500 focus:outline-none"
+                />
+                <div class="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    id="cancel-new-category-btn"
+                    class="min-h-[40px] rounded-xl border border-slate-700 bg-slate-800 px-3 text-xs font-semibold text-slate-300 hover:text-white active:scale-95"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    id="save-new-category-btn"
+                    class="min-h-[40px] rounded-xl bg-pink-500 hover:bg-pink-600 px-4 text-xs font-bold text-white active:scale-95"
+                  >
+                    Agregar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Precio -->
+          <div>
+            <label for="prod-price" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-300">
+              Precio (USD) <span class="text-pink-500">*</span>
+            </label>
+            <div class="flex h-12 overflow-hidden rounded-xl border border-slate-800 bg-slate-950 focus-within:border-pink-500 focus-within:ring-2 focus-within:ring-pink-500/20">
+              <span class="flex items-center border-r border-slate-800 bg-slate-900 px-3.5 text-sm font-mono font-bold text-emerald-400 select-none">
+                $
+              </span>
+              <input
+                id="prod-price"
+                type="number"
+                inputmode="decimal"
+                step="0.01"
+                min="0.01"
+                required
+                placeholder="58.00"
+                class="h-full w-full bg-transparent px-3.5 text-sm font-mono text-white placeholder:text-slate-600 focus:outline-none tabular-nums"
+              />
+            </div>
+            <p id="error-prod-price" class="mt-1 hidden text-xs font-medium text-red-400">Ingresa un precio mayor a 0.</p>
+          </div>
+        </div>
+
+        <!-- Bloque 3: Selector táctil de tallas disponibles (S, M, L, XL) -->
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold uppercase tracking-wider text-slate-200">
+              Tallas disponibles <span class="text-pink-500">*</span>
+            </label>
+            <button
+              type="button"
+              id="select-all-sizes-btn"
+              class="min-h-[36px] rounded-lg px-2 text-xs font-bold text-pink-400 underline underline-offset-2 hover:text-pink-300"
+            >
+              Seleccionar todas
+            </button>
+          </div>
+
+          <div class="grid grid-cols-4 gap-2" role="group" aria-label="Tallas disponibles">
+            {(['S', 'M', 'L', 'XL'] as const).map((talla) => (
+              <button
+                type="button"
+                data-size-toggle={talla}
+                aria-pressed="true"
+                class="admin-size-toggle-btn flex min-h-[48px] items-center justify-center rounded-xl border border-pink-500 bg-pink-500 text-sm font-bold text-white shadow-md shadow-pink-500/20 transition active:scale-95"
+              >
+                {talla}
+              </button>
+            ))}
+          </div>
+          <p id="error-prod-tallas" class="hidden text-xs font-medium text-red-400">Selecciona al menos una talla disponible.</p>
+
+          <!-- Medidas exactas (colapsable para mantener el flujo ágil) -->
+          <details class="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
+            <summary class="flex cursor-pointer items-center justify-between text-xs font-semibold text-slate-300 select-none">
+              <span>Medidas exactas en cm (auto-sugeridas)</span>
+              <i class="fa-solid fa-chevron-down text-[10px] text-slate-500" aria-hidden="true"></i>
+            </summary>
+            <div class="mt-3 space-y-2">
+              <div class="flex justify-end">
+                <button
+                  id="btn-autofill-cm"
+                  type="button"
+                  class="text-[11px] font-mono text-pink-400 hover:text-pink-300 underline"
+                >
+                  Sugerir cm por categoría
+                </button>
+              </div>
+              {(['S', 'M', 'L', 'XL'] as const).map((sz) => (
+                <div class="flex items-center gap-2">
+                  <span class="w-12 font-mono text-xs font-bold text-slate-300">Talla {sz}</span>
+                  <input
+                    id={`size-cm-${sz}`}
+                    type="text"
+                    placeholder={`Medidas en cm para ${sz}`}
+                    class="flex-1 rounded-lg border border-slate-800 bg-slate-900 px-2.5 py-1.5 text-[11px] font-mono text-slate-200 focus:border-pink-500 focus:outline-none"
+                  />
+                </div>
+              ))}
+            </div>
+          </details>
+        </div>
+
+        <!-- Bloque 4: Material principal y Descripción breve (Opcional) -->
+        <div class="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/90 p-4">
+          <div>
+            <label for="prod-material" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-300">
+              Material principal
+            </label>
+            <div class="relative">
+              <select
+                id="prod-material"
+                class="h-12 w-full appearance-none rounded-xl border border-slate-800 bg-slate-950 py-3 pr-10 pl-3.5 text-sm leading-5 text-white focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 focus:outline-none"
+              >
+                <option value="">Selecciona un material (opcional)...</option>
+                <option value="Algodón French Terry 500 GSM">Algodón French Terry 500 GSM</option>
+                <option value="Algodón Peinado 100%">Algodón Peinado 100%</option>
+                <option value="Mezclilla (Denim) Heavyweight">Mezclilla (Denim) Heavyweight</option>
+                <option value="Nylon Técnico / Parachute">Nylon Técnico / Parachute</option>
+                <option value="Poliéster Reciclado">Poliéster Reciclado</option>
+                <option value="Algodón / Elastano">Algodón / Elastano</option>
+                <option value="Lona / Gabardina">Lona / Gabardina</option>
+              </select>
+              <i class="fa-solid fa-chevron-down pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-xs text-slate-400" aria-hidden="true"></i>
+            </div>
+          </div>
+
+          <div>
+            <div class="mb-1.5 flex items-center justify-between">
+              <label for="prod-spec-1" class="text-xs font-bold uppercase tracking-wider text-slate-300">
+                Descripción breve <span class="font-normal text-slate-500">(Opcional)</span>
+              </label>
+              <span id="desc-char-count" class="text-[11px] font-mono text-slate-400 tabular-nums">0/140</span>
+            </div>
+            <textarea
+              id="prod-spec-1"
+              rows="2"
+              maxlength="140"
+              placeholder="Ej. Corte regular, lavado ácido artesanal, edición limitada..."
+              class="w-full rounded-xl border border-slate-800 bg-slate-950 p-3 text-sm text-white placeholder:text-slate-500 focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 focus:outline-none"
+            ></textarea>
+          </div>
+
+          <details class="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
+            <summary class="flex cursor-pointer items-center justify-between text-xs font-semibold text-slate-400 select-none">
+              <span>Especificaciones adicionales (opcional)</span>
+              <i class="fa-solid fa-chevron-down text-[10px]" aria-hidden="true"></i>
+            </summary>
+            <div class="mt-2.5 space-y-2">
+              <input
+                id="prod-spec-2"
+                type="text"
+                placeholder="2. Ej. Costuras reforzadas doble aguja"
+                class="w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:border-pink-500 focus:outline-none"
+              />
+              <input
+                id="prod-spec-3"
+                type="text"
+                placeholder="3. Ej. Lavado ácido pre-encogido"
+                class="w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:border-pink-500 focus:outline-none"
+              />
+            </div>
+          </details>
+        </div>
+
+        <!-- Zona destructiva (Visible únicamente al editar un producto existente) -->
+        <div id="delete-product-zone" class="hidden pt-2">
+          <button
+            type="button"
+            id="open-delete-confirm-btn"
+            class="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-5 text-sm font-bold text-red-400 transition hover:bg-red-500/20 active:scale-[0.99]"
+          >
+            <i class="fa-solid fa-trash-can text-sm" aria-hidden="true"></i>
+            <span>Eliminar producto</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Barra inferior fija para uso con una mano: Cancelar y Guardar -->
+      <footer class="flex shrink-0 items-center gap-3 border-t border-slate-800 bg-slate-900/95 p-3 backdrop-blur-md">
+        <button
+          type="button"
+          id="cancel-product-form-btn"
+          class="h-12 flex-1 rounded-xl border border-slate-700 bg-slate-800/80 px-4 text-sm font-bold text-slate-200 transition hover:bg-slate-800 hover:text-white active:scale-[0.99]"
+        >
+          Cancelar
+        </button>
+        <button
+          id="btn-create-product"
+          type="submit"
+          form="create-product-form"
+          class="h-12 flex-[1.5] inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 px-5 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-500/20 transition active:scale-[0.99] disabled:opacity-60 disabled:pointer-events-none"
+        >
+          <i id="create-prod-icon" class="fa-solid fa-check text-xs" aria-hidden="true"></i>
+          <span id="create-prod-text">Guardar</span>
+        </button>
+      </footer>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- MODAL 3: CONFIRMACIÓN DE BORRADO (FRICCIÓN INTENCIONAL SEGURA) -->
+    <!-- ============================================================== -->
+    <div
+      id="confirm-delete-modal"
+      class="fixed inset-0 z-[60] hidden items-end justify-center bg-slate-950/85 p-4 backdrop-blur-sm sm:items-center"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="confirm-delete-title"
+    >
+      <div class="w-full max-w-sm rounded-3xl border border-slate-800 bg-slate-900 p-5 text-slate-100 shadow-2xl">
+        <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-500/15 border border-red-500/30 text-red-400">
+          <i class="fa-solid fa-triangle-exclamation text-lg" aria-hidden="true"></i>
+        </div>
+        <h3 id="confirm-delete-title" class="text-center font-heading text-base font-bold text-white">
+          ¿Eliminar este producto?
+        </h3>
+        <p id="confirm-delete-desc" class="mt-1.5 text-center text-xs text-slate-400">
+          Esta acción quitará la prenda de tu catálogo activo.
+        </p>
+        <div class="mt-5 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            id="cancel-delete-btn"
+            class="h-12 rounded-xl border border-slate-700 bg-slate-800 text-xs font-bold text-slate-200 transition hover:bg-slate-700 active:scale-95"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            id="confirm-delete-btn"
+            class="h-12 rounded-xl bg-red-600 text-xs font-bold text-white transition hover:bg-red-500 active:scale-95"
+          >
+            Sí, eliminar
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- ============================================================== -->
     <!-- MODAL DETALLADO DE ARQUITECTURA OWASP 2025 & JWT               -->
@@ -1131,6 +1430,20 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
         { btnId: 'tab-btn-jwt', panelId: 'tab-panel-jwt' },
       ];
 
+      function syncFabVisibility() {
+        const fabBtn = document.getElementById('fab-create-product-btn');
+        const bottomTabs = document.getElementById('admin-bottom-tabs');
+        const isProdTabActive = document.getElementById('tab-btn-productos')?.getAttribute('aria-selected') === 'true';
+        const isAuthed = !jwtSessionView?.classList.contains('hidden');
+        if (bottomTabs) {
+          bottomTabs.classList.toggle('hidden', !isAuthed);
+        }
+        if (!fabBtn) return;
+        const shouldShow = Boolean(isProdTabActive && isAuthed);
+        fabBtn.classList.toggle('hidden', !shouldShow);
+        fabBtn.classList.toggle('flex', shouldShow);
+      }
+
       function switchAdminTab(targetBtnId: string) {
         tabButtons.forEach(({ btnId, panelId }) => {
           const btn = document.getElementById(btnId);
@@ -1146,6 +1459,7 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
             panel.classList.toggle('hidden', !isActive);
           }
         });
+        syncFabVisibility();
       }
 
       tabButtons.forEach(({ btnId }) => {
@@ -1557,15 +1871,16 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
       // Botón Autocompletar Producto Demo para pruebas rápidas (solo en desarrollo)
       if (import.meta.env.DEV) {
         document.getElementById('btn-fill-sample-prod')?.addEventListener('click', () => {
-          (document.getElementById('prod-name') as HTMLInputElement).value = 'Hoodie Cyber Acid 520G';
+          renderBrandSelectOptions('Nike Sportswear');
           (document.getElementById('prod-category') as HTMLSelectElement).value = 'hoodies';
           (document.getElementById('prod-price') as HTMLInputElement).value = '58.00';
-          (document.getElementById('prod-stock') as HTMLInputElement).value = '9';
-          (document.getElementById('prod-tag') as HTMLInputElement).value = 'Drop #05 • Nuevo Alta';
-          (document.getElementById('prod-fit') as HTMLInputElement).value = 'Ultra Boxy Drop-Shoulder';
-          (document.getElementById('prod-model') as HTMLInputElement).value = '1.81m — Usa Talla L';
-          (document.getElementById('prod-spec-1') as HTMLInputElement).value =
-            'Algodón French Terry 520 GSM con lavado ácido mineral';
+          (document.getElementById('prod-material') as HTMLSelectElement).value = 'Algodón French Terry 500 GSM';
+          const spec1El = document.getElementById('prod-spec-1') as HTMLTextAreaElement;
+          if (spec1El) {
+            spec1El.value = 'Algodón French Terry 520 GSM con lavado ácido mineral y bordado 3D.';
+            const cc = document.getElementById('desc-char-count');
+            if (cc) cc.textContent = `${spec1El.value.length}/140`;
+          }
           (document.getElementById('prod-spec-2') as HTMLInputElement).value =
             'Bordado 3D de alta densidad en pecho y espalda';
           (document.getElementById('prod-spec-3') as HTMLInputElement).value =
@@ -1575,25 +1890,94 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
             'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=700',
             'https://images.unsplash.com/photo-1578681994506-b8f463449011?auto=format&fit=crop&q=80&w=700',
           ];
+          formSelectedSizes = new Set(['S', 'M', 'L', 'XL']);
+          syncAdminSizeToggleButtons();
           fillSuggestedMeasurements();
           renderProductImagesPreview();
-          showToast('Datos de producto de muestra listos para publicar');
+          showToast('Datos de producto de muestra listos para guardar');
         });
       }
 
       // ==============================================================
-      // LISTAR Y CREAR PRODUCTOS EN SUPABASE POSTGRESQL
+      // GESTIÓN DE PRODUCTOS MOBILE-FIRST (CRUD + BÚSQUEDA + FILTROS)
       // ==============================================================
-      async function loadAdminProductsList() {
-        const listEl = document.getElementById('admin-products-list');
-        const countEl = document.getElementById('admin-products-count');
-        if (!listEl || !countEl) return;
+      type AdminSizeKey = 'S' | 'M' | 'L' | 'XL';
+      const ADMIN_ALL_SIZES: AdminSizeKey[] = ['S', 'M', 'L', 'XL'];
 
+      interface AdminProductItem {
+        id: number;
+        marca: string;
+        precio: number;
+        categorySlug: string;
+        categoryName: string;
+        images: string[];
+        activeSizes: AdminSizeKey[];
+        measurements: Record<AdminSizeKey, string>;
+        specs: string[];
+      }
+
+      let adminProductsCache: AdminProductItem[] = [];
+      let adminBrandsCache: string[] = [
+        'Adidas Originals',
+        'Levi’s Originals',
+        'Nike Sportswear',
+        'URBAN_DROP',
+        'Zara Studio',
+      ];
+      let adminCategoriesCache: Array<{ id?: number; slug: string; nombre: string }> = [
+        { slug: 'hoodies', nombre: 'Hoodies' },
+        { slug: 'pantalones', nombre: 'Pantalones' },
+        { slug: 't-shirts', nombre: 'T-Shirts' },
+        { slug: 'chaquetas', nombre: 'Chaquetas' },
+      ];
+      let adminSearchQuery = '';
+      let adminActiveSizeFilter: 'ALL' | AdminSizeKey = 'ALL';
+      let selectedAdminProductId: number | null = null;
+      let formSelectedSizes = new Set<AdminSizeKey>(['S', 'M', 'L', 'XL']);
+
+      function escapeHtml(text: string): string {
+        return String(text || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function renderBrandSelectOptions(selectedBrand = '') {
+        const brandSelect = document.getElementById('prod-marca') as HTMLSelectElement | null;
+        if (!brandSelect) return;
+        if (selectedBrand && !adminBrandsCache.some((b) => b.toLowerCase() === selectedBrand.toLowerCase())) {
+          adminBrandsCache.push(selectedBrand);
+        }
+        const sorted = [...adminBrandsCache].sort((a, b) => a.localeCompare(b, 'es'));
+        brandSelect.innerHTML =
+          `<option value="" disabled ${!selectedBrand ? 'selected' : ''}>Selecciona una marca...</option>` +
+          sorted
+            .map(
+              (b) =>
+                `<option value="${escapeHtml(b)}" ${b === selectedBrand ? 'selected' : ''}>${escapeHtml(b)}</option>`
+            )
+            .join('');
+      }
+
+      function renderCategorySelectOptions(selectedSlug = '') {
+        if (!prodCategorySelect) return;
+        const sorted = [...adminCategoriesCache].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+        prodCategorySelect.innerHTML = sorted
+          .map(
+            (cat) =>
+              `<option value="${escapeHtml(cat.slug)}" ${cat.slug === selectedSlug ? 'selected' : ''}>${escapeHtml(
+                cat.nombre
+              )}</option>`
+          )
+          .join('');
+      }
+
+      async function loadAdminCategories() {
         try {
-          const selectQuery =
-            'id,nombre,precio,etiqueta,stock_disponible,categorias(slug,nombre),producto_imagenes(url,orden),producto_tallas(talla,stock_talla)';
           const res = await fetch(
-            `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(selectQuery)}&activo=eq.true&order=id.desc`,
+            `${SUPABASE_URL}/rest/v1/categorias?select=id,slug,nombre&activo=eq.true&order=orden.asc,nombre.asc`,
             {
               headers: {
                 apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -1603,54 +1987,615 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
           );
           if (!res.ok) return;
           const rows = await res.json();
-          if (!Array.isArray(rows)) return;
-
-          countEl.textContent = `${rows.length} prendas activas`;
-          listEl.innerHTML = rows
-            .map((p: any) => {
-              const imgs = [...(p.producto_imagenes || [])].sort((a, b) => a.orden - b.orden);
-              const thumb =
-                imgs[0]?.url ||
-                'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=300';
-              const activeSizes = (p.producto_tallas || [])
-                .filter((t: any) => (t.stock_talla ?? 1) > 0)
-                .map((t: any) => t.talla)
-                .join(', ');
-              const priceNum = typeof p.precio === 'number' ? p.precio : parseFloat(String(p.precio));
-
-              return `
-                <div class="p-2.5 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
-                  <div class="flex items-center gap-2.5 min-w-0">
-                    <img src="${thumb}" alt="${p.nombre}" class="w-10 h-12 rounded-xl object-cover border border-slate-800 shrink-0" />
-                    <div class="min-w-0">
-                      <p class="font-bold text-xs text-white truncate">${p.nombre}</p>
-                      <p class="text-[10px] font-mono text-slate-400">
-                        <span class="text-emerald-400 font-bold">$${priceNum.toFixed(2)}</span> • Tallas: <span class="text-pink-400">${activeSizes || 'S, M, L, XL'}</span>
-                      </p>
-                    </div>
-                  </div>
-                  <span class="text-[10px] font-mono bg-slate-900 text-slate-400 px-2 py-1 rounded-lg border border-slate-800 shrink-0">
-                    ID #${p.id}
-                  </span>
-                </div>
-              `;
-            })
-            .join('');
+          if (Array.isArray(rows) && rows.length > 0) {
+            adminCategoriesCache = rows.map((c: any) => ({
+              id: c.id,
+              slug: String(c.slug),
+              nombre: String(c.nombre),
+            }));
+            renderCategorySelectOptions(prodCategorySelect?.value || adminCategoriesCache[0].slug);
+          }
         } catch {
-          // Ignorar error de red
+          // Mantiene categorías por defecto si falla la red
         }
       }
 
+      function renderAdminCatalog() {
+        const listEl = document.getElementById('admin-products-list');
+        const countEl = document.getElementById('admin-products-count');
+        const skeletonsEl = document.getElementById('admin-loading-skeletons');
+        const emptyEl = document.getElementById('admin-empty-state');
+        if (!listEl || !countEl || !emptyEl) return;
+
+        skeletonsEl?.classList.add('hidden');
+
+        const q = adminSearchQuery.trim().toLowerCase();
+        const filtered = adminProductsCache.filter((p) => {
+          const matchesQuery =
+            !q ||
+            p.marca.toLowerCase().includes(q) ||
+            p.categoryName.toLowerCase().includes(q) ||
+            p.specs.some((s) => s.toLowerCase().includes(q));
+          const matchesSize =
+            adminActiveSizeFilter === 'ALL' || p.activeSizes.includes(adminActiveSizeFilter);
+          return matchesQuery && matchesSize;
+        });
+
+        countEl.textContent = String(adminProductsCache.length);
+
+        if (filtered.length === 0) {
+          listEl.classList.add('hidden');
+          emptyEl.classList.remove('hidden');
+          emptyEl.classList.add('flex');
+
+          const isFiltering = q !== '' || adminActiveSizeFilter !== 'ALL';
+          const titleEl = document.getElementById('admin-empty-title');
+          const subEl = document.getElementById('admin-empty-subtitle');
+          const actionLabelEl = document.getElementById('admin-empty-action-label');
+
+          if (titleEl) {
+            titleEl.textContent = isFiltering
+              ? 'Sin coincidencias en el catálogo'
+              : 'Aún no tienes prendas en tu catálogo';
+          }
+          if (subEl) {
+            subEl.textContent = isFiltering
+              ? 'Prueba con otro nombre, categoría, material o limpia el filtro de tallas.'
+              : 'Agrega tu primer producto con fotos, categoría, precio y tallas disponibles.';
+          }
+          if (actionLabelEl) {
+            actionLabelEl.textContent = isFiltering ? 'Limpiar filtros' : 'Agregar primer producto';
+          }
+          return;
+        }
+
+        emptyEl.classList.add('hidden');
+        emptyEl.classList.remove('flex');
+        listEl.classList.remove('hidden');
+
+        listEl.innerHTML = filtered
+          .map((prod) => {
+            const hasImg = prod.images.length > 0;
+            const extraPhotos = prod.images.length > 1 ? prod.images.length - 1 : 0;
+            const sizesHtml = ADMIN_ALL_SIZES.map((sz) => {
+              const available = prod.activeSizes.includes(sz);
+              return `<span class="inline-flex h-5 min-w-[24px] items-center justify-center rounded px-1 text-[10px] font-mono font-bold ${
+                available
+                  ? 'bg-pink-500/20 text-pink-300 border border-pink-500/30'
+                  : 'bg-slate-900 text-slate-600 line-through border border-slate-800'
+              }">${sz}</span>`;
+            }).join('');
+
+            const subtitleParts = [prod.categoryName, prod.specs[0]].filter(Boolean);
+
+            return `
+              <article
+                data-product-id="${prod.id}"
+                tabindex="0"
+                role="button"
+                aria-label="Ver detalle de ${escapeHtml(prod.marca)}"
+                class="admin-product-card group flex min-h-[96px] cursor-pointer items-center gap-3.5 rounded-2xl border border-slate-800 bg-slate-950/90 p-3 shadow-sm transition hover:border-pink-500/40 active:scale-[0.99]"
+              >
+                <div class="relative h-[76px] w-[76px] shrink-0 overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
+                  ${
+                    hasImg
+                      ? `<img src="${escapeHtml(prod.images[0])}" alt="${escapeHtml(
+                          prod.marca
+                        )}" class="h-full w-full object-cover" loading="lazy" />`
+                      : `<div class="flex h-full w-full items-center justify-center text-slate-500">
+                           <i class="fa-regular fa-image text-xl" aria-hidden="true"></i>
+                         </div>`
+                  }
+                  ${
+                    extraPhotos > 0
+                      ? `<span class="absolute right-1 bottom-1 rounded-md bg-slate-950/90 border border-slate-700 px-1.5 py-0.5 text-[10px] font-mono font-bold text-white">+${extraPhotos}</span>`
+                      : ''
+                  }
+                </div>
+
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-start justify-between gap-2">
+                    <h4 class="truncate font-heading text-sm font-bold text-white group-hover:text-pink-300 transition-colors">${escapeHtml(
+                      prod.marca
+                    )}</h4>
+                    <span class="shrink-0 font-mono text-sm font-bold text-emerald-400 tabular-nums">$${prod.precio.toFixed(
+                      2
+                    )}</span>
+                  </div>
+                  <p class="mt-0.5 truncate text-[11px] text-slate-400">${escapeHtml(subtitleParts.join(' · '))}</p>
+                  <div class="mt-2 flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-1" aria-label="Tallas disponibles">
+                      ${sizesHtml}
+                    </div>
+                    <div class="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        data-edit-product-id="${prod.id}"
+                        aria-label="Modificar ${escapeHtml(prod.marca)}"
+                        title="Modificar"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-pink-500/30 bg-pink-500/15 text-xs text-pink-300 transition hover:bg-pink-500/30 active:scale-95"
+                      >
+                        <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                      </button>
+                      <button
+                        type="button"
+                        data-delete-product-id="${prod.id}"
+                        aria-label="Borrar ${escapeHtml(prod.marca)}"
+                        title="Borrar"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/15 text-xs text-red-400 transition hover:bg-red-500/30 active:scale-95"
+                      >
+                        <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            `;
+          })
+          .join('');
+      }
+
+      async function loadAdminProductsList() {
+        const skeletonsEl = document.getElementById('admin-loading-skeletons');
+        const listEl = document.getElementById('admin-products-list');
+        const emptyEl = document.getElementById('admin-empty-state');
+        const refreshIcon = document.getElementById('refresh-products-icon');
+
+        if (adminProductsCache.length === 0) {
+          skeletonsEl?.classList.remove('hidden');
+          listEl?.classList.add('hidden');
+          emptyEl?.classList.add('hidden');
+        }
+        refreshIcon?.classList.add('animate-spin');
+
+        try {
+          await loadAdminCategories();
+          const selectQuery =
+            'id,nombre,precio,categorias(slug,nombre),producto_imagenes(url,orden),producto_tallas(talla,medidas_cm,stock_talla,orden),producto_especificaciones(descripcion,orden)';
+          const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(selectQuery)}&activo=eq.true&order=id.desc`,
+            {
+              headers: {
+                apikey: SUPABASE_PUBLISHABLE_KEY,
+                Accept: 'application/json',
+              },
+            }
+          );
+          if (!res.ok) {
+            renderAdminCatalog();
+            return;
+          }
+          const rows = await res.json();
+          if (!Array.isArray(rows)) return;
+
+          adminProductsCache = rows.map((p: any) => {
+            const imgs = [...(p.producto_imagenes || [])]
+              .sort((a: any, b: any) => (a.orden ?? 0) - (b.orden ?? 0))
+              .map((img: any) => String(img.url));
+            const catSlug = String(p.categorias?.slug || 'hoodies');
+            const catName = String(p.categorias?.nombre || catSlug);
+            const fallbackMeas = DEFAULT_MEASUREMENTS_BY_CAT[catSlug] || DEFAULT_MEASUREMENTS_BY_CAT.hoodies;
+            const measurements: Record<AdminSizeKey, string> = { ...fallbackMeas };
+            const activeSizes: AdminSizeKey[] = [];
+
+            for (const t of p.producto_tallas || []) {
+              const sz = String(t.talla) as AdminSizeKey;
+              if (ADMIN_ALL_SIZES.includes(sz)) {
+                if (t.medidas_cm) measurements[sz] = String(t.medidas_cm);
+                if ((t.stock_talla ?? 1) > 0) activeSizes.push(sz);
+              }
+            }
+
+            if ((p.producto_tallas || []).length === 0) {
+              activeSizes.push('S', 'M', 'L', 'XL');
+            }
+
+            const specs = [...(p.producto_especificaciones || [])]
+              .sort((a: any, b: any) => (a.orden ?? 0) - (b.orden ?? 0))
+              .map((s: any) => String(s.descripcion))
+              .filter(Boolean);
+
+            const priceNum = typeof p.precio === 'number' ? p.precio : parseFloat(String(p.precio)) || 0;
+            const marcaName = String(p.nombre || '').trim();
+            if (marcaName && !adminBrandsCache.some((b) => b.toLowerCase() === marcaName.toLowerCase())) {
+              adminBrandsCache.push(marcaName);
+            }
+
+            return {
+              id: Number(p.id),
+              marca: marcaName,
+              precio: priceNum,
+              categorySlug: catSlug,
+              categoryName: catName,
+              images: imgs,
+              activeSizes: ADMIN_ALL_SIZES.filter((sz) => activeSizes.includes(sz)),
+              measurements,
+              specs,
+            };
+          });
+
+          renderAdminCatalog();
+        } catch {
+          renderAdminCatalog();
+        } finally {
+          refreshIcon?.classList.remove('animate-spin');
+        }
+      }
+
+      // Buscador, botón limpiar, refresh y filtro por tallas
+      const adminSearchInput = document.getElementById('admin-search-input') as HTMLInputElement | null;
+      const adminClearSearchBtn = document.getElementById('admin-clear-search-btn');
+
+      adminSearchInput?.addEventListener('input', (e) => {
+        adminSearchQuery = (e.target as HTMLInputElement).value;
+        const hasText = adminSearchQuery.length > 0;
+        adminClearSearchBtn?.classList.toggle('hidden', !hasText);
+        adminClearSearchBtn?.classList.toggle('flex', hasText);
+        renderAdminCatalog();
+      });
+
+      adminClearSearchBtn?.addEventListener('click', () => {
+        adminSearchQuery = '';
+        if (adminSearchInput) adminSearchInput.value = '';
+        adminClearSearchBtn.classList.add('hidden');
+        adminClearSearchBtn.classList.remove('flex');
+        renderAdminCatalog();
+      });
+
+      document.querySelectorAll('.admin-size-filter-chip').forEach((chip) => {
+        chip.addEventListener('click', () => {
+          adminActiveSizeFilter = ((chip as HTMLElement).dataset.sizeFilter || 'ALL') as 'ALL' | AdminSizeKey;
+          document.querySelectorAll('.admin-size-filter-chip').forEach((c) => {
+            const isSelected = c === chip;
+            c.className = isSelected
+              ? 'admin-size-filter-chip min-h-[44px] min-w-[44px] shrink-0 rounded-xl bg-pink-500 px-4 text-xs font-bold text-white shadow-md shadow-pink-500/20 transition active:scale-95'
+              : 'admin-size-filter-chip min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-slate-800 bg-slate-900 px-3 text-xs font-bold text-slate-300 transition hover:bg-slate-800 hover:text-white active:scale-95';
+          });
+          renderAdminCatalog();
+        });
+      });
+
+      document.getElementById('btn-refresh-products')?.addEventListener('click', () => {
+        loadAdminProductsList();
+      });
+
+      document.getElementById('admin-empty-action-btn')?.addEventListener('click', () => {
+        const isFiltering = adminSearchQuery.trim() !== '' || adminActiveSizeFilter !== 'ALL';
+        if (isFiltering) {
+          adminSearchQuery = '';
+          if (adminSearchInput) adminSearchInput.value = '';
+          adminClearSearchBtn?.classList.add('hidden');
+          adminClearSearchBtn?.classList.remove('flex');
+          const allChip = document.querySelector('.admin-size-filter-chip[data-size-filter="ALL"]') as HTMLElement | null;
+          allChip?.click();
+        } else {
+          openAdminProductForm(null);
+        }
+      });
+
+      // Contracción dinámica del FAB al hacer scroll
+      let lastAdminScrollY = window.scrollY;
+      const fabCreateLabel = document.getElementById('fab-create-label');
+      window.addEventListener(
+        'scroll',
+        () => {
+          const currentY = window.scrollY;
+          if (currentY > lastAdminScrollY + 12) {
+            fabCreateLabel?.classList.add('hidden');
+          } else if (currentY < lastAdminScrollY - 12) {
+            fabCreateLabel?.classList.remove('hidden');
+          }
+          lastAdminScrollY = currentY;
+        },
+        { passive: true }
+      );
+
+      // ==============================================================
+      // MODAL 1: DETALLE DE PRODUCTO (LECTURA SEGURA ANTES DE EDITAR)
+      // ==============================================================
+      const adminDetailModal = document.getElementById('admin-detail-modal');
+
+      function openAdminProductDetail(id: number) {
+        const prod = adminProductsCache.find((p) => p.id === id);
+        if (!prod || !adminDetailModal) return;
+        selectedAdminProductId = prod.id;
+
+        const nameEl = document.getElementById('admin-detail-name');
+        const priceEl = document.getElementById('admin-detail-price');
+        const catEl = document.getElementById('admin-detail-category');
+
+        if (nameEl) nameEl.textContent = prod.marca;
+        if (priceEl) priceEl.textContent = `$${prod.precio.toFixed(2)}`;
+        if (catEl) catEl.textContent = prod.categoryName;
+
+        const mainImg = document.getElementById('admin-detail-main-img') as HTMLImageElement | null;
+        const noImg = document.getElementById('admin-detail-no-img');
+        const thumbsContainer = document.getElementById('admin-detail-thumbs');
+
+        if (prod.images.length > 0 && mainImg) {
+          mainImg.src = prod.images[0];
+          mainImg.alt = prod.marca;
+          mainImg.classList.remove('hidden');
+          noImg?.classList.add('hidden');
+          noImg?.classList.remove('flex');
+
+          if (thumbsContainer) {
+            thumbsContainer.innerHTML =
+              prod.images.length > 1
+                ? prod.images
+                    .map(
+                      (src, idx) => `
+                  <button type="button" data-thumb-src="${escapeHtml(src)}" class="admin-detail-thumb-btn h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 ${
+                        idx === 0 ? 'border-pink-500' : 'border-slate-800 opacity-60'
+                      }">
+                    <img src="${escapeHtml(src)}" alt="" class="h-full w-full object-cover" />
+                  </button>`
+                    )
+                    .join('')
+                : '';
+          }
+        } else {
+          mainImg?.classList.add('hidden');
+          noImg?.classList.remove('hidden');
+          noImg?.classList.add('flex');
+          if (thumbsContainer) thumbsContainer.innerHTML = '';
+        }
+
+        const sizesEl = document.getElementById('admin-detail-sizes');
+        if (sizesEl) {
+          sizesEl.innerHTML = ADMIN_ALL_SIZES.map((sz) => {
+            const available = prod.activeSizes.includes(sz);
+            return `
+              <div class="flex h-11 items-center justify-center rounded-xl border text-xs font-mono font-bold ${
+                available
+                  ? 'border-pink-500/40 bg-pink-500/20 text-pink-200'
+                  : 'border-slate-800 bg-slate-950 text-slate-600 line-through'
+              }">
+                ${sz}
+              </div>
+            `;
+          }).join('');
+        }
+
+        const measEl = document.getElementById('admin-detail-measurements');
+        if (measEl) {
+          measEl.innerHTML = prod.activeSizes
+            .map((sz) => `<div><span class="text-pink-400 font-bold">${sz}:</span> ${escapeHtml(prod.measurements[sz])}</div>`)
+            .join('');
+        }
+
+        const specsWrapper = document.getElementById('admin-detail-specs-wrapper');
+        const specsList = document.getElementById('admin-detail-specs');
+        if (specsWrapper && specsList) {
+          if (prod.specs.length > 0) {
+            specsList.innerHTML = prod.specs
+              .map((s) => `<li class="flex items-start gap-2"><span class="text-pink-400">•</span><span>${escapeHtml(s)}</span></li>`)
+              .join('');
+            specsWrapper.classList.remove('hidden');
+          } else {
+            specsWrapper.classList.add('hidden');
+          }
+        }
+
+        adminDetailModal.classList.remove('hidden');
+        adminDetailModal.classList.add('flex');
+      }
+
+      document.getElementById('admin-products-list')?.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const editBtn = target.closest('[data-edit-product-id]') as HTMLElement | null;
+        if (editBtn) {
+          e.stopPropagation();
+          const id = Number(editBtn.dataset.editProductId);
+          if (!Number.isNaN(id)) openAdminProductForm(id);
+          return;
+        }
+        const deleteBtn = target.closest('[data-delete-product-id]') as HTMLElement | null;
+        if (deleteBtn) {
+          e.stopPropagation();
+          const id = Number(deleteBtn.dataset.deleteProductId);
+          if (!Number.isNaN(id)) openDeleteConfirmation(id);
+          return;
+        }
+        const card = target.closest('.admin-product-card') as HTMLElement | null;
+        if (!card) return;
+        const id = Number(card.dataset.productId);
+        if (!Number.isNaN(id)) openAdminProductDetail(id);
+      });
+
+      document.getElementById('admin-detail-thumbs')?.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest('.admin-detail-thumb-btn') as HTMLElement | null;
+        if (!btn) return;
+        const mainImg = document.getElementById('admin-detail-main-img') as HTMLImageElement | null;
+        if (mainImg && btn.dataset.thumbSrc) mainImg.src = btn.dataset.thumbSrc;
+        document.querySelectorAll('.admin-detail-thumb-btn').forEach((b) => {
+          const isCur = b === btn;
+          b.classList.toggle('border-pink-500', isCur);
+          b.classList.toggle('border-slate-800', !isCur);
+          b.classList.toggle('opacity-60', !isCur);
+        });
+      });
+
+      document.getElementById('close-admin-detail-btn')?.addEventListener('click', () => {
+        adminDetailModal?.classList.add('hidden');
+        adminDetailModal?.classList.remove('flex');
+      });
+
+      adminDetailModal?.addEventListener('click', (e) => {
+        if (e.target === adminDetailModal) {
+          adminDetailModal.classList.add('hidden');
+          adminDetailModal.classList.remove('flex');
+        }
+      });
+
+      document.getElementById('admin-detail-edit-btn')?.addEventListener('click', () => {
+        adminDetailModal?.classList.add('hidden');
+        adminDetailModal?.classList.remove('flex');
+        if (selectedAdminProductId !== null) {
+          openAdminProductForm(selectedAdminProductId);
+        }
+      });
+
+      document.getElementById('admin-detail-delete-btn')?.addEventListener('click', () => {
+        if (selectedAdminProductId !== null) {
+          openDeleteConfirmation(selectedAdminProductId);
+        }
+      });
+
+      // ==============================================================
+      // MODAL 2: FORMULARIO CREAR / EDITAR + CREACIÓN RÁPIDA CATEGORÍA
+      // ==============================================================
+      const adminFormModal = document.getElementById('admin-form-modal');
       const createProductForm = document.getElementById('create-product-form') as HTMLFormElement;
       const DEFAULT_R2_TELEMETRY_STATUS = 'READY • SHA-256 + EXIF STRIP';
-      const DEFAULT_R2_TELEMETRY_DETAIL =
-        'Magic Bytes verificados • WebP/AVIF 700×933 (3:4) • Cache-Control: public, max-age=31536000, immutable';
+      const DEFAULT_R2_TELEMETRY_DETAIL = '700×933 • Immutable';
 
-      /** Limpia por completo los campos, imágenes pendientes y telemetría R2 tras crear un producto. */
+      function syncAdminSizeToggleButtons() {
+        document.querySelectorAll('.admin-size-toggle-btn').forEach((btn) => {
+          const sz = (btn as HTMLElement).dataset.sizeToggle as AdminSizeKey;
+          const active = formSelectedSizes.has(sz);
+          btn.setAttribute('aria-pressed', String(active));
+          btn.className = active
+            ? 'admin-size-toggle-btn flex min-h-[48px] items-center justify-center rounded-xl border border-pink-500 bg-pink-500 text-sm font-bold text-white shadow-md shadow-pink-500/20 transition active:scale-95'
+            : 'admin-size-toggle-btn flex min-h-[48px] items-center justify-center rounded-xl border border-slate-800 bg-slate-950 text-sm font-bold text-slate-400 hover:text-white transition active:scale-95';
+        });
+      }
+
+      function toggleInlineCategoryCreator(open: boolean) {
+        const box = document.getElementById('new-category-box');
+        const btn = document.getElementById('toggle-new-category-btn');
+        const input = document.getElementById('new-category-input') as HTMLInputElement | null;
+        box?.classList.toggle('hidden', !open);
+        btn?.setAttribute('aria-expanded', String(open));
+        if (open && input) {
+          input.value = '';
+          setTimeout(() => input.focus(), 50);
+        }
+      }
+
+      async function handleCreateInlineCategory() {
+        const input = document.getElementById('new-category-input') as HTMLInputElement | null;
+        const raw = input?.value.trim() || '';
+        if (!raw) {
+          input?.focus();
+          return;
+        }
+
+        const existing = adminCategoriesCache.find((c) => c.nombre.toLowerCase() === raw.toLowerCase());
+        if (existing) {
+          renderCategorySelectOptions(existing.slug);
+          toggleInlineCategoryCreator(false);
+          showToast(`Categoría "${existing.nombre}" seleccionada`);
+          return;
+        }
+
+        const slug = raw
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+
+        const accessToken = getActiveAccessToken();
+        let createdId: number | undefined;
+
+        if (accessToken) {
+          try {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/categorias`, {
+              method: 'POST',
+              headers: {
+                apikey: SUPABASE_PUBLISHABLE_KEY,
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                Prefer: 'return=representation',
+              },
+              body: JSON.stringify({
+                slug,
+                nombre: raw,
+                icono: 'fa-shirt',
+                orden: adminCategoriesCache.length + 1,
+                activo: true,
+              }),
+            });
+            if (res.ok) {
+              const rows = await res.json();
+              if (Array.isArray(rows) && rows[0]?.id) createdId = Number(rows[0].id);
+            }
+          } catch {
+            // Continúa con alta local si la política RLS restringe inserción de categorías
+          }
+        }
+
+        adminCategoriesCache.push({ id: createdId, slug, nombre: raw });
+        renderCategorySelectOptions(slug);
+        toggleInlineCategoryCreator(false);
+        showToast(`Categoría "${raw}" agregada`);
+      }
+
+      function toggleInlineBrandCreator(open: boolean) {
+        const box = document.getElementById('new-brand-box');
+        const btn = document.getElementById('toggle-new-brand-btn');
+        const input = document.getElementById('new-brand-input') as HTMLInputElement | null;
+        box?.classList.toggle('hidden', !open);
+        btn?.setAttribute('aria-expanded', String(open));
+        if (open && input) {
+          input.value = '';
+          setTimeout(() => input.focus(), 50);
+        }
+      }
+
+      function handleCreateInlineBrand() {
+        const input = document.getElementById('new-brand-input') as HTMLInputElement | null;
+        const raw = input?.value.trim() || '';
+        if (!raw) {
+          input?.focus();
+          return;
+        }
+        const existing = adminBrandsCache.find((b) => b.toLowerCase() === raw.toLowerCase());
+        if (existing) {
+          renderBrandSelectOptions(existing);
+          toggleInlineBrandCreator(false);
+          document.getElementById('error-prod-marca')?.classList.add('hidden');
+          showToast(`Marca "${existing}" seleccionada`);
+          return;
+        }
+        adminBrandsCache.push(raw);
+        renderBrandSelectOptions(raw);
+        toggleInlineBrandCreator(false);
+        document.getElementById('error-prod-marca')?.classList.add('hidden');
+        showToast(`Marca "${raw}" creada`);
+      }
+
+      document.getElementById('toggle-new-brand-btn')?.addEventListener('click', () => {
+        const isHidden = document.getElementById('new-brand-box')?.classList.contains('hidden') ?? true;
+        toggleInlineBrandCreator(isHidden);
+      });
+      document.getElementById('cancel-new-brand-btn')?.addEventListener('click', () => toggleInlineBrandCreator(false));
+      document.getElementById('save-new-brand-btn')?.addEventListener('click', handleCreateInlineBrand);
+      document.getElementById('new-brand-input')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleCreateInlineBrand();
+        }
+      });
+
+      document.getElementById('toggle-new-category-btn')?.addEventListener('click', () => {
+        const isHidden = document.getElementById('new-category-box')?.classList.contains('hidden') ?? true;
+        toggleInlineCategoryCreator(isHidden);
+      });
+      document.getElementById('cancel-new-category-btn')?.addEventListener('click', () => toggleInlineCategoryCreator(false));
+      document.getElementById('save-new-category-btn')?.addEventListener('click', handleCreateInlineCategory);
+      document.getElementById('new-category-input')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleCreateInlineCategory();
+        }
+      });
+
       function resetCreateProductForm() {
         createProductForm?.reset();
-        const stockInput = document.getElementById('prod-stock') as HTMLInputElement | null;
-        if (stockInput) stockInput.value = '8';
+        const editIdEl = document.getElementById('prod-editing-id') as HTMLInputElement | null;
+        if (editIdEl) editIdEl.value = '';
 
         const fileInput = document.getElementById('prod-image-files') as HTMLInputElement | null;
         if (fileInput) fileInput.value = '';
@@ -1661,6 +2606,12 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
         pendingProductImages = [];
         renderProductImagesPreview();
 
+        formSelectedSizes = new Set<AdminSizeKey>(['S', 'M', 'L', 'XL']);
+        syncAdminSizeToggleButtons();
+
+        const cc = document.getElementById('desc-char-count');
+        if (cc) cc.textContent = '0/140';
+
         const statusEl = document.getElementById('r2-telemetry-status');
         const detailEl = document.getElementById('r2-telemetry-detail');
         if (statusEl) statusEl.textContent = DEFAULT_R2_TELEMETRY_STATUS;
@@ -1669,11 +2620,111 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
         fillSuggestedMeasurements();
       }
 
-      document.getElementById('btn-clear-product-form')?.addEventListener('click', () => {
-        const submitBtn = document.getElementById('btn-create-product') as HTMLButtonElement | null;
-        if (submitBtn?.disabled) return;
-        resetCreateProductForm();
-        showToast('Formulario limpiado.', 3000);
+      function openAdminProductForm(productId: number | null = null) {
+        ['error-prod-marca', 'error-prod-price', 'error-prod-tallas'].forEach((id) =>
+          document.getElementById(id)?.classList.add('hidden')
+        );
+        toggleInlineBrandCreator(false);
+        toggleInlineCategoryCreator(false);
+
+        const isEdit = productId !== null;
+        const prod = isEdit ? adminProductsCache.find((p) => p.id === productId) : null;
+
+        const titleEl = document.getElementById('product-form-modal-title');
+        if (titleEl) titleEl.textContent = prod ? 'Editar producto' : 'Nuevo producto';
+
+        const editIdEl = document.getElementById('prod-editing-id') as HTMLInputElement | null;
+        if (editIdEl) editIdEl.value = prod ? String(prod.id) : '';
+
+        renderBrandSelectOptions(prod ? prod.marca : '');
+        renderCategorySelectOptions(prod ? prod.categorySlug : adminCategoriesCache[0]?.slug || 'hoodies');
+
+        (document.getElementById('prod-price') as HTMLInputElement).value = prod ? String(prod.precio) : '';
+
+        const matSelect = document.getElementById('prod-material') as HTMLSelectElement | null;
+        const spec1El = document.getElementById('prod-spec-1') as HTMLTextAreaElement | null;
+        const spec2El = document.getElementById('prod-spec-2') as HTMLInputElement | null;
+        const spec3El = document.getElementById('prod-spec-3') as HTMLInputElement | null;
+
+        if (prod) {
+          const matchedMat = Array.from(matSelect?.options || []).find((opt) =>
+            opt.value && prod.specs[0]?.toLowerCase().includes(opt.value.toLowerCase())
+          );
+          if (matSelect) matSelect.value = matchedMat ? matchedMat.value : '';
+          if (spec1El) spec1El.value = prod.specs[0] || '';
+          if (spec2El) spec2El.value = prod.specs[1] || '';
+          if (spec3El) spec3El.value = prod.specs[2] || '';
+        } else {
+          if (matSelect) matSelect.value = '';
+          if (spec1El) spec1El.value = '';
+          if (spec2El) spec2El.value = '';
+          if (spec3El) spec3El.value = '';
+        }
+
+        const cc = document.getElementById('desc-char-count');
+        if (cc && spec1El) cc.textContent = `${spec1El.value.length}/140`;
+
+        formSelectedSizes = new Set<AdminSizeKey>(prod ? prod.activeSizes : ['S', 'M', 'L', 'XL']);
+        syncAdminSizeToggleButtons();
+
+        ADMIN_ALL_SIZES.forEach((sz) => {
+          const input = document.getElementById(`size-cm-${sz}`) as HTMLInputElement | null;
+          if (input) {
+            if (prod) {
+              input.value = prod.measurements[sz] || '';
+            } else {
+              const template = DEFAULT_MEASUREMENTS_BY_CAT[prodCategorySelect?.value || 'hoodies'] || DEFAULT_MEASUREMENTS_BY_CAT.hoodies;
+              input.value = template[sz];
+            }
+          }
+        });
+
+        pendingProductImages = prod ? [...prod.images] : [];
+        renderProductImagesPreview();
+
+        document.getElementById('delete-product-zone')?.classList.toggle('hidden', !prod);
+
+        adminFormModal?.classList.remove('hidden');
+        adminFormModal?.classList.add('flex');
+        if (createProductForm) createProductForm.scrollTop = 0;
+        requestAnimationFrame(() => {
+          if (createProductForm) createProductForm.scrollTop = 0;
+        });
+      }
+
+      document.getElementById('fab-create-product-btn')?.addEventListener('click', () => openAdminProductForm(null));
+      document.getElementById('cancel-product-form-btn')?.addEventListener('click', () => {
+        adminFormModal?.classList.add('hidden');
+        adminFormModal?.classList.remove('flex');
+      });
+
+      document.querySelectorAll('.admin-size-toggle-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const sz = (btn as HTMLElement).dataset.sizeToggle as AdminSizeKey;
+          if (formSelectedSizes.has(sz)) {
+            formSelectedSizes.delete(sz);
+          } else {
+            formSelectedSizes.add(sz);
+          }
+          syncAdminSizeToggleButtons();
+          document.getElementById('error-prod-tallas')?.classList.add('hidden');
+        });
+      });
+
+      document.getElementById('select-all-sizes-btn')?.addEventListener('click', () => {
+        if (formSelectedSizes.size === ADMIN_ALL_SIZES.length) {
+          formSelectedSizes.clear();
+        } else {
+          ADMIN_ALL_SIZES.forEach((sz) => formSelectedSizes.add(sz));
+        }
+        syncAdminSizeToggleButtons();
+        document.getElementById('error-prod-tallas')?.classList.add('hidden');
+      });
+
+      document.getElementById('prod-spec-1')?.addEventListener('input', (e) => {
+        const val = (e.target as HTMLTextAreaElement).value;
+        const cc = document.getElementById('desc-char-count');
+        if (cc) cc.textContent = `${val.length}/140`;
       });
 
       createProductForm?.addEventListener('submit', async (e: SubmitEvent) => {
@@ -1684,16 +2735,35 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
           return;
         }
 
-        const name = (document.getElementById('prod-name') as HTMLInputElement).value.trim();
+        const editingIdRaw = (document.getElementById('prod-editing-id') as HTMLInputElement)?.value;
+        const editingId = editingIdRaw ? Number(editingIdRaw) : null;
+
+        const marca = (document.getElementById('prod-marca') as HTMLSelectElement).value.trim();
         const categorySlug = (document.getElementById('prod-category') as HTMLSelectElement).value;
         const priceVal = parseFloat((document.getElementById('prod-price') as HTMLInputElement).value);
-        const stockVal = parseInt((document.getElementById('prod-stock') as HTMLInputElement).value, 10) || 5;
-        const tag = (document.getElementById('prod-tag') as HTMLInputElement).value.trim() || 'Nuevo Drop';
-        const fit = (document.getElementById('prod-fit') as HTMLInputElement).value.trim() || 'Oversized Fit';
-        const modelInfo = (document.getElementById('prod-model') as HTMLInputElement).value.trim() || '1.78m — Talla L';
+        const materialVal = (document.getElementById('prod-material') as HTMLSelectElement)?.value.trim() || '';
 
-        if (!name || Number.isNaN(priceVal) || priceVal <= 0) {
-          showToast('Completa el nombre y un precio válido para el producto');
+        let valid = true;
+        if (!marca) {
+          document.getElementById('error-prod-marca')?.classList.remove('hidden');
+          valid = false;
+        } else {
+          document.getElementById('error-prod-marca')?.classList.add('hidden');
+        }
+        if (Number.isNaN(priceVal) || priceVal <= 0) {
+          document.getElementById('error-prod-price')?.classList.remove('hidden');
+          valid = false;
+        } else {
+          document.getElementById('error-prod-price')?.classList.add('hidden');
+        }
+        if (formSelectedSizes.size === 0) {
+          document.getElementById('error-prod-tallas')?.classList.remove('hidden');
+          valid = false;
+        } else {
+          document.getElementById('error-prod-tallas')?.classList.add('hidden');
+        }
+        if (!valid) {
+          showToast('Revisa los campos obligatorios del producto');
           return;
         }
 
@@ -1702,48 +2772,42 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
           return;
         }
 
-        const sizesPayload = (['S', 'M', 'L', 'XL'] as const).map((sz, index) => {
-          const active = (document.getElementById(`size-active-${sz}`) as HTMLInputElement)?.checked ?? true;
+        const sizesPayload = ADMIN_ALL_SIZES.map((sz, index) => {
+          const active = formSelectedSizes.has(sz);
           const cm =
             (document.getElementById(`size-cm-${sz}`) as HTMLInputElement)?.value.trim() ||
-            DEFAULT_MEASUREMENTS_BY_CAT.hoodies[sz];
+            (DEFAULT_MEASUREMENTS_BY_CAT[categorySlug] || DEFAULT_MEASUREMENTS_BY_CAT.hoodies)[sz];
           return {
             talla: sz,
             medidas_cm: cm,
-            stock_talla: active ? Math.max(1, Math.ceil(stockVal / 4)) : 0,
+            stock_talla: active ? 1 : 0,
             orden: index + 1,
           };
         });
 
-        if (!sizesPayload.some((s) => s.stock_talla > 0)) {
-          showToast('Selecciona al menos una talla disponible');
-          return;
-        }
+        const spec1 = (document.getElementById('prod-spec-1') as HTMLTextAreaElement)?.value.trim();
+        const spec2 = (document.getElementById('prod-spec-2') as HTMLInputElement)?.value.trim();
+        const spec3 = (document.getElementById('prod-spec-3') as HTMLInputElement)?.value.trim();
 
         const rawSpecs = [
-          (document.getElementById('prod-spec-1') as HTMLInputElement)?.value.trim(),
-          (document.getElementById('prod-spec-2') as HTMLInputElement)?.value.trim(),
-          (document.getElementById('prod-spec-3') as HTMLInputElement)?.value.trim(),
+          materialVal && (!spec1 || !spec1.toLowerCase().includes(materialVal.toLowerCase())) ? materialVal : '',
+          spec1,
+          spec2,
+          spec3,
         ].filter(Boolean) as string[];
 
         const finalSpecs =
           rawSpecs.length > 0
             ? rawSpecs
-            : [
-                'Confección streetwear de alta densidad',
-                'Costuras reforzadas y acabado suave al tacto',
-                'Edición limitada URBAN_DROP',
-              ];
+            : ['Confección streetwear de alta densidad', 'Edición limitada URBAN_DROP'];
 
         const btn = document.getElementById('btn-create-product') as HTMLButtonElement;
-        const clearBtn = document.getElementById('btn-clear-product-form') as HTMLButtonElement | null;
         const icon = document.getElementById('create-prod-icon') as HTMLElement;
         const text = document.getElementById('create-prod-text') as HTMLElement;
 
         btn.disabled = true;
-        if (clearBtn) clearBtn.disabled = true;
-        icon.className = 'fa-solid fa-circle-notch animate-spin text-sm shrink-0';
-        text.textContent = 'Guardando producto en Supabase PostgreSQL...';
+        icon.className = 'fa-solid fa-circle-notch animate-spin text-xs shrink-0';
+        text.textContent = 'Guardando...';
 
         try {
           // 1. Obtener ID de la categoría por slug
@@ -1759,44 +2823,87 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
           const catRows = await catRes.json();
           const categoriaId = Array.isArray(catRows) && catRows[0]?.id ? catRows[0].id : 1;
 
-          // 2. Insertar en `public.productos`
-          const prodRes = await fetch(`${SUPABASE_URL}/rest/v1/productos`, {
-            method: 'POST',
-            headers: {
-              apikey: SUPABASE_PUBLISHABLE_KEY,
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-              Prefer: 'return=representation',
-            },
-            body: JSON.stringify({
-              categoria_id: categoriaId,
-              nombre: name,
-              precio: priceVal,
-              etiqueta: tag,
-              corte_fit: fit,
-              info_modelo: modelInfo,
-              stock_disponible: stockVal,
-              activo: true,
-              orden: 1,
-            }),
-          });
+          let targetProductId = editingId;
 
-          if (!prodRes.ok) {
-            const errText = await prodRes.text();
-            throw new Error(errText || 'Error al insertar producto');
+          if (editingId) {
+            // UPDATE producto existente
+            const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/productos?id=eq.${editingId}`, {
+              method: 'PATCH',
+              headers: {
+                apikey: SUPABASE_PUBLISHABLE_KEY,
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                Prefer: 'return=minimal',
+              },
+              body: JSON.stringify({
+                categoria_id: categoriaId,
+                nombre: marca,
+                precio: priceVal,
+                etiqueta: 'Catálogo',
+                corte_fit: 'Regular',
+                info_modelo: 'N/A',
+                stock_disponible: 1,
+              }),
+            });
+            if (!patchRes.ok) throw new Error('Error al actualizar producto');
+
+            // Limpiar tablas hijas para reemplazar con el estado actualizado
+            const delResults = await Promise.all([
+              fetch(`${SUPABASE_URL}/rest/v1/producto_imagenes?producto_id=eq.${editingId}`, {
+                method: 'DELETE',
+                headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${accessToken}` },
+              }),
+              fetch(`${SUPABASE_URL}/rest/v1/producto_tallas?producto_id=eq.${editingId}`, {
+                method: 'DELETE',
+                headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${accessToken}` },
+              }),
+              fetch(`${SUPABASE_URL}/rest/v1/producto_especificaciones?producto_id=eq.${editingId}`, {
+                method: 'DELETE',
+                headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${accessToken}` },
+              }),
+            ]);
+            if (delResults.some((r) => !r.ok)) {
+              throw new Error('Error al actualizar detalles del producto');
+            }
+          } else {
+            // INSERT nuevo producto
+            const prodRes = await fetch(`${SUPABASE_URL}/rest/v1/productos`, {
+              method: 'POST',
+              headers: {
+                apikey: SUPABASE_PUBLISHABLE_KEY,
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                Prefer: 'return=representation',
+              },
+              body: JSON.stringify({
+                categoria_id: categoriaId,
+                nombre: marca,
+                precio: priceVal,
+                etiqueta: 'Catálogo',
+                corte_fit: 'Regular',
+                info_modelo: 'N/A',
+                stock_disponible: 1,
+                activo: true,
+                orden: 1,
+              }),
+            });
+            if (!prodRes.ok) {
+              const errText = await prodRes.text();
+              throw new Error(errText || 'Error al insertar producto');
+            }
+            const createdRows = await prodRes.json();
+            targetProductId = createdRows[0]?.id;
           }
 
-          const createdRows = await prodRes.json();
-          const newProductId = createdRows[0]?.id;
-          if (!newProductId) throw new Error('No se recibió el ID del nuevo producto');
+          if (!targetProductId) throw new Error('No se recibió el ID del producto');
 
-          // 3. Insertar imágenes en `public.producto_imagenes` con metadatos Cloudflare R2
+          // 3. Insertar imágenes en `public.producto_imagenes`
           const imagesRows = pendingProductImages.map((item, idx) => {
             const desc = normalizeImageDescriptor(item);
             return {
-              producto_id: newProductId,
+              producto_id: targetProductId,
               url: desc.url,
-              alt_text: `${name} (${fit}) - Vista ${idx + 1} | Catálogo URBAN_DROP`,
+              alt_text: `${marca} - Vista ${idx + 1} | Catálogo URBAN_DROP`,
               orden: idx + 1,
               r2_object_key: desc.r2_object_key,
               content_hash: desc.content_hash,
@@ -1811,7 +2918,7 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
             };
           });
 
-          await fetch(`${SUPABASE_URL}/rest/v1/producto_imagenes`, {
+          const imgInsertRes = await fetch(`${SUPABASE_URL}/rest/v1/producto_imagenes`, {
             method: 'POST',
             headers: {
               apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -1821,14 +2928,15 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
             },
             body: JSON.stringify(imagesRows),
           });
+          if (!imgInsertRes.ok) throw new Error('Error al guardar imágenes del producto');
 
           // 4. Insertar tallas en `public.producto_tallas`
           const tallasRows = sizesPayload.map((t) => ({
-            producto_id: newProductId,
+            producto_id: targetProductId,
             ...t,
           }));
 
-          await fetch(`${SUPABASE_URL}/rest/v1/producto_tallas`, {
+          const tallasInsertRes = await fetch(`${SUPABASE_URL}/rest/v1/producto_tallas`, {
             method: 'POST',
             headers: {
               apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -1838,35 +2946,122 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
             },
             body: JSON.stringify(tallasRows),
           });
+          if (!tallasInsertRes.ok) throw new Error('Error al guardar tallas del producto');
 
           // 5. Insertar especificaciones en `public.producto_especificaciones`
           const specsRows = finalSpecs.map((desc, idx) => ({
-            producto_id: newProductId,
+            producto_id: targetProductId,
             descripcion: desc,
             orden: idx + 1,
           }));
 
-          await fetch(`${SUPABASE_URL}/rest/v1/producto_especificaciones`, {
-            method: 'POST',
+          if (specsRows.length > 0) {
+            const specsInsertRes = await fetch(`${SUPABASE_URL}/rest/v1/producto_especificaciones`, {
+              method: 'POST',
+              headers: {
+                apikey: SUPABASE_PUBLISHABLE_KEY,
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                Prefer: 'return=minimal',
+              },
+              body: JSON.stringify(specsRows),
+            });
+            if (!specsInsertRes.ok) throw new Error('Error al guardar especificaciones del producto');
+          }
+
+          adminFormModal?.classList.add('hidden');
+          adminFormModal?.classList.remove('flex');
+          adminDetailModal?.classList.add('hidden');
+          adminDetailModal?.classList.remove('flex');
+          resetCreateProductForm();
+          showToast(editingId ? `Producto "${marca}" modificado` : `¡Producto "${marca}" agregado al catálogo!`, 3000);
+          await loadAdminProductsList().catch(() => {});
+        } catch (err) {
+          showToast(err instanceof Error && err.message ? err.message : 'Error al guardar el producto. Verifica tu sesión JWT.');
+        } finally {
+          btn.disabled = false;
+          icon.className = 'fa-solid fa-check text-xs';
+          text.textContent = 'Guardar';
+        }
+      });
+
+      // ==============================================================
+      // MODAL 3: BORRADO SEGURO CON CONFIRMACIÓN (SOFT DELETE RLS)
+      // ==============================================================
+      const confirmDeleteModal = document.getElementById('confirm-delete-modal');
+      let pendingDeleteProductId: number | null = null;
+
+      function openDeleteConfirmation(productId: number) {
+        const prod = adminProductsCache.find((p) => p.id === productId);
+        if (!prod || !confirmDeleteModal) return;
+
+        pendingDeleteProductId = productId;
+        const titleEl = document.getElementById('confirm-delete-title');
+        if (titleEl) titleEl.textContent = `¿Eliminar "${prod.marca}"?`;
+        confirmDeleteModal.classList.remove('hidden');
+        confirmDeleteModal.classList.add('flex');
+      }
+
+      document.getElementById('open-delete-confirm-btn')?.addEventListener('click', () => {
+        const editingId = Number((document.getElementById('prod-editing-id') as HTMLInputElement)?.value);
+        if (editingId) openDeleteConfirmation(editingId);
+      });
+
+      document.getElementById('cancel-delete-btn')?.addEventListener('click', () => {
+        pendingDeleteProductId = null;
+        confirmDeleteModal?.classList.add('hidden');
+        confirmDeleteModal?.classList.remove('flex');
+      });
+
+      document.getElementById('confirm-delete-btn')?.addEventListener('click', async () => {
+        const targetId = pendingDeleteProductId || Number((document.getElementById('prod-editing-id') as HTMLInputElement)?.value);
+        const accessToken = getActiveAccessToken();
+        if (!targetId || !accessToken) {
+          showToast('Sesión JWT requerida para eliminar');
+          return;
+        }
+
+        const confirmBtn = document.getElementById('confirm-delete-btn') as HTMLButtonElement | null;
+        if (confirmBtn) {
+          confirmBtn.disabled = true;
+          confirmBtn.textContent = 'Eliminando...';
+        }
+
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/productos?id=eq.${targetId}`, {
+            method: 'DELETE',
             headers: {
               apikey: SUPABASE_PUBLISHABLE_KEY,
               Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
               Prefer: 'return=minimal',
             },
-            body: JSON.stringify(specsRows),
           });
 
+          if (!res.ok) {
+            const errBody = await res.text().catch(() => '');
+            throw new Error(errBody || 'Error al eliminar producto');
+          }
+
+          pendingDeleteProductId = null;
+          confirmDeleteModal?.classList.add('hidden');
+          confirmDeleteModal?.classList.remove('flex');
+          adminDetailModal?.classList.add('hidden');
+          adminDetailModal?.classList.remove('flex');
+          adminFormModal?.classList.add('hidden');
+          adminFormModal?.classList.remove('flex');
           resetCreateProductForm();
-          showToast(`¡Producto "${name}" creado en el catálogo!`, 3000);
+
+          adminProductsCache = adminProductsCache.filter((p) => p.id !== targetId);
+          renderAdminCatalog();
+          showToast('Producto eliminado del catálogo', 3000);
           await loadAdminProductsList().catch(() => {});
-        } catch (err: any) {
-          showToast('Error al guardar el producto. Verifica tu sesión JWT.');
+        } catch {
+          showToast('No se pudo eliminar el producto. Verifica tu sesión.');
         } finally {
-          btn.disabled = false;
-          if (clearBtn) clearBtn.disabled = false;
-          icon.className = 'fa-solid fa-cloud-arrow-up text-sm shrink-0';
-          text.textContent = 'Publicar Producto en el Catálogo';
+          if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Sí, eliminar';
+          }
         }
       });
 
@@ -2020,6 +3215,7 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
 
         loginCardView.classList.add('hidden');
         jwtSessionView.classList.remove('hidden');
+        syncFabVisibility();
 
         const userEmailEl = document.getElementById('jwt-user-email');
         const roleBadgeEl = document.getElementById('jwt-role-badge');
@@ -2299,6 +3495,7 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
         if (expInterval) clearInterval(expInterval);
         jwtSessionView.classList.add('hidden');
         loginCardView.classList.remove('hidden');
+        syncFabVisibility();
         initCsrfToken();
         showToast('Sesión cerrada y token JWT revocado');
       });
@@ -2334,6 +3531,13 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
     <style>
       .font-heading {
         font-family: 'Space Grotesk', sans-serif;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
       }
     </style>
   </body>
