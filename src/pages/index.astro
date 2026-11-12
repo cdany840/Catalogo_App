@@ -254,18 +254,20 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
           data-category={product.category}
           data-search-text={`${product.name} ${product.tag} ${product.fit} ${product.category} ${product.specs.join(' ')}`.toLowerCase()}
         >
-          <!-- Indicador superior de Stories (Ley de Jakob, decorativo para a11y) -->
-          <div class="absolute top-3 inset-x-3 z-20 flex gap-1.5 pointer-events-none" aria-hidden="true">
-            {product.images.map((_, imgIndex) => (
-              <div
-                class:list={[
-                  "h-1 flex-1 rounded-full transition-all duration-300",
-                  imgIndex === 0 ? "bg-white/90 shadow-sm" : "bg-white/30"
-                ]}
-                data-dot-index={imgIndex}
-              />
-            ))}
-          </div>
+          <!-- Indicador superior de Stories (solo cuando hay más de 1 imagen) -->
+          {product.images.length > 1 && (
+            <div class="absolute top-3 inset-x-3 z-20 flex gap-1.5 pointer-events-none" aria-hidden="true">
+              {product.images.map((_, imgIndex) => (
+                <div
+                  class:list={[
+                    "h-1 flex-1 rounded-full transition-all duration-300",
+                    imgIndex === 0 ? "bg-white/90 shadow-sm" : "bg-white/30"
+                  ]}
+                  data-dot-index={imgIndex}
+                />
+              ))}
+            </div>
+          )}
 
           <!-- Caja de Imagen y Carrusel Táctil (CLS=0 aspect-ratio 3/4 + LQIP + GPU acceleration) -->
           <div
@@ -344,7 +346,8 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
               type="button"
               data-action="slide-prev"
               data-product-id={product.id}
-              class="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/75 text-white backdrop-blur-md flex items-center justify-center opacity-85 hover:opacity-100 active:scale-90 transition-all z-20 focus-visible:outline-none"
+              disabled={product.images.length <= 1}
+              class={`absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/75 text-white backdrop-blur-md items-center justify-center opacity-85 hover:opacity-100 active:scale-90 transition-all z-20 focus-visible:outline-none ${product.images.length <= 1 ? 'hidden' : 'flex'}`}
               aria-label={`Ver foto anterior de ${product.name}`}
             >
               <i class="fa-solid fa-chevron-left text-xs" aria-hidden="true"></i>
@@ -353,7 +356,8 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
               type="button"
               data-action="slide-next"
               data-product-id={product.id}
-              class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/75 text-white backdrop-blur-md flex items-center justify-center opacity-85 hover:opacity-100 active:scale-90 transition-all z-20 focus-visible:outline-none"
+              disabled={product.images.length <= 1}
+              class={`absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/75 text-white backdrop-blur-md items-center justify-center opacity-85 hover:opacity-100 active:scale-90 transition-all z-20 focus-visible:outline-none ${product.images.length <= 1 ? 'hidden' : 'flex'}`}
               aria-label={`Ver siguiente foto de ${product.name}`}
             >
               <i class="fa-solid fa-chevron-right text-xs" aria-hidden="true"></i>
@@ -1487,14 +1491,17 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
         const lqipUri = product.imageMeta?.[0]?.lqipDataUri || createClientLqipDataUri(dominantColor, '#1e1b4b');
         const altText = `${product.name} — Corte ${product.fit} (${product.tag}) — Vista 1 de ${product.images.length}`;
 
-        const dotsHtml = product.images
-          .map(
-            (_, imgIndex) =>
-              `<div class="h-1 flex-1 rounded-full transition-all duration-300 ${
-                imgIndex === 0 ? 'bg-white/90 shadow-sm' : 'bg-white/30'
-              }" data-dot-index="${imgIndex}"></div>`
-          )
-          .join('');
+        const dotsHtml =
+          product.images.length > 1
+            ? product.images
+                .map(
+                  (_, imgIndex) =>
+                    `<div class="h-1 flex-1 rounded-full transition-all duration-300 ${
+                      imgIndex === 0 ? 'bg-white/90 shadow-sm' : 'bg-white/30'
+                    }" data-dot-index="${imgIndex}"></div>`
+                )
+                .join('')
+            : '';
 
         const sizesHtml = ALL_SIZES.map((sz) => {
           const isAvail = product.availableSizes ? product.availableSizes[sz] !== false : true;
@@ -1587,7 +1594,8 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
               type="button"
               data-action="slide-prev"
               data-product-id="${product.id}"
-              class="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/75 text-white backdrop-blur-md flex items-center justify-center opacity-85 hover:opacity-100 active:scale-90 transition-all z-20 focus-visible:outline-none"
+              ${product.images.length <= 1 ? 'disabled' : ''}
+              class="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/75 text-white backdrop-blur-md ${product.images.length <= 1 ? 'hidden' : 'flex'} items-center justify-center opacity-85 hover:opacity-100 active:scale-90 transition-all z-20 focus-visible:outline-none"
               aria-label="Ver foto anterior de ${product.name}"
             >
               <i class="fa-solid fa-chevron-left text-xs" aria-hidden="true"></i>
@@ -1596,7 +1604,8 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
               type="button"
               data-action="slide-next"
               data-product-id="${product.id}"
-              class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/75 text-white backdrop-blur-md flex items-center justify-center opacity-85 hover:opacity-100 active:scale-90 transition-all z-20 focus-visible:outline-none"
+              ${product.images.length <= 1 ? 'disabled' : ''}
+              class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/75 text-white backdrop-blur-md ${product.images.length <= 1 ? 'hidden' : 'flex'} items-center justify-center opacity-85 hover:opacity-100 active:scale-90 transition-all z-20 focus-visible:outline-none"
               aria-label="Ver siguiente foto de ${product.name}"
             >
               <i class="fa-solid fa-chevron-right text-xs" aria-hidden="true"></i>
@@ -2106,7 +2115,7 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
       // 6. Lógica de Carrusel Sincronizada con Negociación AVIF/WebP (Tarjeta + Modal Detalle)
       function changeProductSlide(productId: number, step: number) {
         const product = state.products.get(productId);
-        if (!product) return;
+        if (!product || product.images.length <= 1) return;
 
         const total = product.images.length;
         let current = (product.currentSlide ?? 0) + step;
@@ -2692,17 +2701,34 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
         const specsContainer = document.getElementById('pdm-specs-list') as HTMLElement;
         specsContainer.innerHTML = product.specs.map((s) => `<li>${s}</li>`).join('');
 
+        const hasMultipleImages = product.images.length > 1;
         const dotsContainer = document.getElementById('pdm-dots-container') as HTMLElement;
-        dotsContainer.innerHTML = product.images
-          .map(
-            (_, i) =>
-              `<div class="h-1 flex-1 rounded-full transition-all duration-300 ${
-                i === (product.currentSlide ?? 0) ? 'bg-white/90' : 'bg-white/30'
-              }" id="pdm-dot-${i}"></div>`
-          )
-          .join('');
+        dotsContainer.innerHTML = hasMultipleImages
+          ? product.images
+              .map(
+                (_, i) =>
+                  `<div class="h-1 flex-1 rounded-full transition-all duration-300 ${
+                    i === (product.currentSlide ?? 0) ? 'bg-white/90' : 'bg-white/30'
+                  }" id="pdm-dot-${i}"></div>`
+              )
+              .join('')
+          : '';
+        dotsContainer.classList.toggle('hidden', !hasMultipleImages);
 
         (document.getElementById('pdm-total-counter') as HTMLElement).textContent = String(product.images.length);
+
+        const pdmPrevBtn = document.getElementById('pdm-slide-prev') as HTMLButtonElement | null;
+        const pdmNextBtn = document.getElementById('pdm-slide-next') as HTMLButtonElement | null;
+        if (pdmPrevBtn) {
+          pdmPrevBtn.disabled = !hasMultipleImages;
+          pdmPrevBtn.classList.toggle('hidden', !hasMultipleImages);
+          pdmPrevBtn.classList.toggle('flex', hasMultipleImages);
+        }
+        if (pdmNextBtn) {
+          pdmNextBtn.disabled = !hasMultipleImages;
+          pdmNextBtn.classList.toggle('hidden', !hasMultipleImages);
+          pdmNextBtn.classList.toggle('flex', hasMultipleImages);
+        }
 
         updateDetailGallery();
         syncDetailModalSizes(productId);

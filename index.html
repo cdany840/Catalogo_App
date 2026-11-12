@@ -3048,14 +3048,17 @@
         const lqipUri = product.imageMeta?.[0]?.lqipDataUri || createClientLqipDataUri(dominantColor, '#1e1b4b');
         const altText = `${product.name} — Corte ${product.fit} (${product.tag}) — Vista 1 de ${product.images.length}`;
 
-        const dotsHtml = product.images
-          .map(
-            (_, imgIndex) =>
-              `<div class="h-1 flex-1 rounded-full transition-all duration-300 ${
-                imgIndex === 0 ? 'bg-white/90 shadow-sm' : 'bg-white/30'
-              }" data-dot-index="${imgIndex}"></div>`
-          )
-          .join('');
+        const dotsHtml =
+          product.images.length > 1
+            ? product.images
+                .map(
+                  (_, imgIndex) =>
+                    `<div class="h-1 flex-1 rounded-full transition-all duration-300 ${
+                      imgIndex === 0 ? 'bg-white/90 shadow-sm' : 'bg-white/30'
+                    }" data-dot-index="${imgIndex}"></div>`
+                )
+                .join('')
+            : '';
 
         const sizesHtml = ALL_SIZES.map((sz) => {
           const isAvail = product.availableSizes ? product.availableSizes[sz] !== false : true;
@@ -3148,7 +3151,8 @@
               type="button"
               data-action="slide-prev"
               data-product-id="${product.id}"
-              class="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/75 text-white backdrop-blur-md flex items-center justify-center opacity-85 hover:opacity-100 active:scale-90 transition-all z-20 focus-visible:outline-none"
+              ${product.images.length <= 1 ? 'disabled' : ''}
+              class="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/75 text-white backdrop-blur-md ${product.images.length <= 1 ? 'hidden' : 'flex'} items-center justify-center opacity-85 hover:opacity-100 active:scale-90 transition-all z-20 focus-visible:outline-none"
               aria-label="Ver foto anterior de ${product.name}"
             >
               <i class="fa-solid fa-chevron-left text-xs" aria-hidden="true"></i>
@@ -3157,7 +3161,8 @@
               type="button"
               data-action="slide-next"
               data-product-id="${product.id}"
-              class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/75 text-white backdrop-blur-md flex items-center justify-center opacity-85 hover:opacity-100 active:scale-90 transition-all z-20 focus-visible:outline-none"
+              ${product.images.length <= 1 ? 'disabled' : ''}
+              class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/75 text-white backdrop-blur-md ${product.images.length <= 1 ? 'hidden' : 'flex'} items-center justify-center opacity-85 hover:opacity-100 active:scale-90 transition-all z-20 focus-visible:outline-none"
               aria-label="Ver siguiente foto de ${product.name}"
             >
               <i class="fa-solid fa-chevron-right text-xs" aria-hidden="true"></i>
@@ -3647,7 +3652,7 @@
 
       function changeProductSlide(productId, step) {
         const product = state.products.get(productId);
-        if (!product) return;
+        if (!product || product.images.length <= 1) return;
 
         const total = product.images.length;
         let current = (product.currentSlide ?? 0) + step;
@@ -4190,17 +4195,34 @@
         const specsContainer = document.getElementById('pdm-specs-list');
         specsContainer.innerHTML = product.specs.map((s) => `<li>${s}</li>`).join('');
 
+        const hasMultipleImages = product.images.length > 1;
         const dotsContainer = document.getElementById('pdm-dots-container');
-        dotsContainer.innerHTML = product.images
-          .map(
-            (_, i) =>
-              `<div class="h-1 flex-1 rounded-full transition-all duration-300 ${
-                i === (product.currentSlide ?? 0) ? 'bg-white/90' : 'bg-white/30'
-              }" id="pdm-dot-${i}"></div>`
-          )
-          .join('');
+        dotsContainer.innerHTML = hasMultipleImages
+          ? product.images
+              .map(
+                (_, i) =>
+                  `<div class="h-1 flex-1 rounded-full transition-all duration-300 ${
+                    i === (product.currentSlide ?? 0) ? 'bg-white/90' : 'bg-white/30'
+                  }" id="pdm-dot-${i}"></div>`
+              )
+              .join('')
+          : '';
+        dotsContainer.classList.toggle('hidden', !hasMultipleImages);
 
         document.getElementById('pdm-total-counter').textContent = String(product.images.length);
+
+        const pdmPrevBtn = document.getElementById('pdm-slide-prev');
+        const pdmNextBtn = document.getElementById('pdm-slide-next');
+        if (pdmPrevBtn) {
+          pdmPrevBtn.disabled = !hasMultipleImages;
+          pdmPrevBtn.classList.toggle('hidden', !hasMultipleImages);
+          pdmPrevBtn.classList.toggle('flex', hasMultipleImages);
+        }
+        if (pdmNextBtn) {
+          pdmNextBtn.disabled = !hasMultipleImages;
+          pdmNextBtn.classList.toggle('hidden', !hasMultipleImages);
+          pdmNextBtn.classList.toggle('flex', hasMultipleImages);
+        }
 
         updateDetailGallery();
         syncDetailModalSizes(productId);
