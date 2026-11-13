@@ -784,12 +784,12 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
           </div>
         </div>
 
-        <!-- Acciones principales fijas al fondo: Eliminar y Editar producto -->
-        <div class="border-t border-slate-800 bg-slate-900 p-4 flex items-center gap-2.5">
+        <!-- Acciones principales fijas al fondo: Eliminar, Compartir y Editar producto -->
+        <div class="border-t border-slate-800 bg-slate-900 p-4 flex items-center gap-2">
           <button
             type="button"
             id="admin-detail-delete-btn"
-            class="flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/15 hover:bg-red-500/25 px-4 text-sm font-bold text-red-400 transition active:scale-[0.99]"
+            class="flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/15 hover:bg-red-500/25 px-3.5 text-sm font-bold text-red-400 transition active:scale-[0.99]"
             aria-label="Borrar producto"
           >
             <i class="fa-solid fa-trash-can text-xs" aria-hidden="true"></i>
@@ -797,8 +797,18 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
           </button>
           <button
             type="button"
+            id="admin-detail-share-btn"
+            class="flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/15 hover:bg-emerald-500/25 px-3.5 text-sm font-bold text-emerald-300 transition active:scale-[0.99]"
+            aria-label="Compartir enlace del producto"
+            title="Copiar o compartir enlace del producto"
+          >
+            <i class="fa-solid fa-share-nodes text-xs" aria-hidden="true"></i>
+            <span>Compartir</span>
+          </button>
+          <button
+            type="button"
             id="admin-detail-edit-btn"
-            class="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-pink-500 hover:bg-pink-600 px-5 text-sm font-bold text-white shadow-lg shadow-pink-500/20 transition active:scale-[0.99]"
+            class="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-pink-500 hover:bg-pink-600 px-4 text-sm font-bold text-white shadow-lg shadow-pink-500/20 transition active:scale-[0.99]"
           >
             <i class="fa-solid fa-pen text-xs" aria-hidden="true"></i>
             <span>Modificar</span>
@@ -1909,6 +1919,7 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
 
       interface AdminProductItem {
         id: number;
+        slug: string;
         marca: string;
         precio: number;
         categorySlug: string;
@@ -1937,6 +1948,19 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
       let adminActiveSizeFilter: 'ALL' | AdminSizeKey = 'ALL';
       let selectedAdminProductId: number | null = null;
       let formSelectedSizes = new Set<AdminSizeKey>(['S', 'M', 'L', 'XL']);
+
+      function buildAdminDynamicSlug(marca: string, id: number): string {
+        const base =
+          String(marca || 'drop')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .slice(0, 48)
+            .replace(/-+$/g, '') || 'drop';
+        return `${base}-${id}`;
+      }
 
       function escapeHtml(text: string): string {
         return String(text || '')
@@ -2153,10 +2177,10 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
 
         try {
           await loadAdminCategories();
-          const selectQuery =
+          const selectQueryBase =
             'id,nombre,precio,categorias(slug,nombre),producto_imagenes(url,orden),producto_tallas(talla,medidas_cm,stock_talla,orden),producto_especificaciones(descripcion,orden)';
-          const res = await fetch(
-            `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(selectQuery)}&activo=eq.true&order=id.desc`,
+          let res = await fetch(
+            `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(`slug,${selectQueryBase}`)}&activo=eq.true&order=id.desc`,
             {
               headers: {
                 apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -2164,6 +2188,17 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
               },
             }
           );
+          if (!res.ok && res.status === 400) {
+            res = await fetch(
+              `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(selectQueryBase)}&activo=eq.true&order=id.desc`,
+              {
+                headers: {
+                  apikey: SUPABASE_PUBLISHABLE_KEY,
+                  Accept: 'application/json',
+                },
+              }
+            );
+          }
           if (!res.ok) {
             renderAdminCatalog();
             return;
@@ -2206,6 +2241,7 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
 
             return {
               id: Number(p.id),
+              slug: p.slug ? String(p.slug) : buildAdminDynamicSlug(marcaName, Number(p.id)),
               marca: marcaName,
               precio: priceNum,
               categorySlug: catSlug,
@@ -2428,6 +2464,33 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
         if (e.target === adminDetailModal) {
           adminDetailModal.classList.add('hidden');
           adminDetailModal.classList.remove('flex');
+        }
+      });
+
+      document.getElementById('admin-detail-share-btn')?.addEventListener('click', async () => {
+        if (!selectedAdminProductId) return;
+        const prod = adminProductsCache.find((p: any) => p.id === selectedAdminProductId);
+        if (!prod) return;
+        const slug = prod.slug || buildAdminDynamicSlug(prod.marca, prod.id);
+        const shareUrl = `${window.location.origin}/p/${encodeURIComponent(slug)}`;
+        const shareText = `Mira ${prod.marca} ($${prod.precio.toFixed(2)}) en URBAN_DROP`;
+
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: prod.marca,
+              text: shareText,
+              url: shareUrl,
+            });
+            return;
+          } catch {
+            // fallback a portapapeles
+          }
+        }
+
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(shareUrl);
+          showToast('¡Enlace directo del producto copiado!');
         }
       });
 

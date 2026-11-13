@@ -15,7 +15,11 @@ declare
   cleaned text;
   rand_suffix text;
 begin
-  cleaned := lower(coalesce(base_name, ''));
+  cleaned := translate(
+    lower(coalesce(base_name, '')),
+    'áéíóúüñàèìòùâêîôû',
+    'aeiouunaeiouaeiou'
+  );
   cleaned := regexp_replace(cleaned, '[^a-z0-9]+', '-', 'g');
   cleaned := regexp_replace(cleaned, '^-+|-+$', '', 'g');
   if cleaned = '' then
@@ -73,7 +77,7 @@ $$;
 
 drop trigger if exists trg_productos_default_slug on public.productos;
 create trigger trg_productos_default_slug
-  before insert on public.productos
+  before insert or update on public.productos
   for each row
   execute function public.set_productos_default_slug();
 

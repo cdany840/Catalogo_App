@@ -275,21 +275,25 @@ const PRODUCT_RELATIONAL_SELECT = [
   'producto_especificaciones(descripcion,orden)',
 ].join(',');
 
+const PRODUCT_RELATIONAL_SELECT_WITH_SLUG = `slug,${PRODUCT_RELATIONAL_SELECT}`;
+
 /**
  * Obtiene el catálogo completo desde Supabase PostgreSQL en una sola consulta JOIN.
+ * Si la columna `slug` aún no existe en la tabla, hace fallback transparente y genera slugs dinámicos.
  */
 export async function fetchCatalogFromSupabase(): Promise<{
   products: EnrichedProduct[];
   storeConfig: StoreConfig;
   source: 'supabase' | 'fallback';
 }> {
-  const endpoint = `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(
-    PRODUCT_RELATIONAL_SELECT
-  )}&activo=eq.true&order=orden.asc,id.desc`;
+  const buildEndpoint = (selectCols: string) =>
+    `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(
+      selectCols
+    )}&activo=eq.true&order=orden.asc,id.desc`;
 
   try {
-    const [prodRes, storeConfig] = await Promise.all([
-      fetch(endpoint, {
+    const [initialProdRes, storeConfig] = await Promise.all([
+      fetch(buildEndpoint(PRODUCT_RELATIONAL_SELECT_WITH_SLUG), {
         headers: {
           apikey: SUPABASE_PUBLISHABLE_KEY,
           Accept: 'application/json',
@@ -297,6 +301,16 @@ export async function fetchCatalogFromSupabase(): Promise<{
       }),
       fetchStoreConfigFromSupabase(),
     ]);
+
+    let prodRes = initialProdRes;
+    if (!prodRes.ok && prodRes.status === 400) {
+      prodRes = await fetch(buildEndpoint(PRODUCT_RELATIONAL_SELECT), {
+        headers: {
+          apikey: SUPABASE_PUBLISHABLE_KEY,
+          Accept: 'application/json',
+        },
+      });
+    }
 
     if (!prodRes.ok) {
       throw new Error(`Supabase HTTP ${prodRes.status}`);
@@ -328,6 +342,7 @@ export async function fetchCatalogFromSupabase(): Promise<{
 /**
  * Obtiene un producto individual por su `slug` desde Supabase PostgreSQL
  * junto con la configuración de tienda y productos relacionados.
+ * Soporta tanto columna `slug` nativa en DB como slugs dinámicos `<nombre>-<id>`.
  */
 export async function fetchProductBySlugFromSupabase(slug: string): Promise<{
   product: EnrichedProduct | null;
@@ -344,37 +359,55 @@ export async function fetchProductBySlugFromSupabase(slug: string): Promise<{
     };
   }
 
-  const endpoint = `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(
-    PRODUCT_RELATIONAL_SELECT
+  const trailingIdMatch = slug.match(/-(\d+)$/);
+  const fallbackId = trailingIdMatch ? Number(trailingIdMatch[1]) : null;
+
+  const bySlugEndpoint = `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(
+    PRODUCT_RELATIONAL_SELECT_WITH_SLUG
   )}&slug=eq.${encodeURIComponent(slug)}&limit=1`;
 
-  const relatedEndpoint = `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(
-    PRODUCT_RELATIONAL_SELECT
+  const relatedBySlugEndpoint = `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(
+    PRODUCT_RELATIONAL_SELECT_WITH_SLUG
   )}&activo=eq.true&slug=neq.${encodeURIComponent(slug)}&order=orden.asc,id.desc&limit=4`;
+
+  const headers = {
+    apikey: SUPABASE_PUBLISHABLE_KEY,
+    Accept: 'application/json',
+  };
 
   try {
     const [prodRes, relatedRes, storeConfig] = await Promise.all([
-      fetch(endpoint, {
-        headers: {
-          apikey: SUPABASE_PUBLISHABLE_KEY,
-          Accept: 'application/json',
-        },
-      }),
-      fetch(relatedEndpoint, {
-        headers: {
-          apikey: SUPABASE_PUBLISHABLE_KEY,
-          Accept: 'application/json',
-        },
-      }),
+      fetch(bySlugEndpoint, { headers }),
+      fetch(relatedBySlugEndpoint, { headers }),
       fetchStoreConfigFromSupabase(),
     ]);
 
-    if (!prodRes.ok) {
+    let rows: SupabaseRelationalProductRow[] = [];
+    let usedIdFallback = false;
+
+    if (prodRes.ok) {
+      const parsed = await prodRes.json();
+      if (Array.isArray(parsed)) rows = parsed;
+    }
+
+    // Fallback transparente por ID embebido si la columna `slug` no existe o no hubo coincidencia exacta
+    if ((!prodRes.ok || rows.length === 0) && fallbackId && Number.isFinite(fallbackId)) {
+      const byIdEndpoint = `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(
+        PRODUCT_RELATIONAL_SELECT
+      )}&id=eq.${fallbackId}&limit=1`;
+      const idRes = await fetch(byIdEndpoint, { headers });
+      if (idRes.ok) {
+        const idRows = await idRes.json();
+        if (Array.isArray(idRows) && idRows.length > 0) {
+          rows = idRows;
+          usedIdFallback = true;
+        }
+      }
+    } else if (!prodRes.ok && prodRes.status !== 400) {
       throw new Error(`Supabase HTTP ${prodRes.status}`);
     }
 
-    const rows: SupabaseRelationalProductRow[] = await prodRes.json();
-    if (!Array.isArray(rows) || rows.length === 0) {
+    if (rows.length === 0) {
       const fb = fallbackProducts.find((p) => p.slug === slug);
       if (fb) {
         const fbRelated = fallbackProducts
@@ -393,10 +426,21 @@ export async function fetchProductBySlugFromSupabase(slug: string): Promise<{
 
     const product = mapSupabaseRowToProduct(rows[0]);
     let relatedProducts: EnrichedProduct[] = [];
-    if (relatedRes.ok) {
+    if (!usedIdFallback && relatedRes.ok) {
       const relRows: SupabaseRelationalProductRow[] = await relatedRes.json();
       if (Array.isArray(relRows)) {
         relatedProducts = relRows.map(mapSupabaseRowToProduct);
+      }
+    } else {
+      const relByIdEndpoint = `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(
+        PRODUCT_RELATIONAL_SELECT
+      )}&activo=eq.true&id=neq.${product.id}&order=orden.asc,id.desc&limit=4`;
+      const relByIdRes = await fetch(relByIdEndpoint, { headers });
+      if (relByIdRes.ok) {
+        const relRows: SupabaseRelationalProductRow[] = await relByIdRes.json();
+        if (Array.isArray(relRows)) {
+          relatedProducts = relRows.map(mapSupabaseRowToProduct);
+        }
       }
     }
 

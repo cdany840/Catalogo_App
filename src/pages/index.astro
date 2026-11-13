@@ -330,22 +330,12 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
               <span data-r2-badge-product={product.id}>{isLcp ? 'LCP•AVIF' : 'R2•AVIF'}</span>
             </span>
 
-            <!-- Botón Guardar en Selección / Favoritos -->
-            <button
-              type="button"
-              data-action="toggle-save"
-              data-product-id={product.id}
-              class="save-product-btn absolute top-7 right-3 z-20 w-8 h-8 rounded-full bg-slate-950/85 backdrop-blur-md text-slate-200 border border-white/15 flex items-center justify-center text-xs hover:text-pink-400 active:scale-90 transition-all focus-visible:outline-none"
-              aria-label={`Guardar ${product.name} en tu selección`}
-            >
-              <i class="fa-regular fa-bookmark" aria-hidden="true" data-save-icon={product.id}></i>
-            </button>
-
+            <!-- Botón Compartir Enlace Directo -->
             <button
               type="button"
               data-action="share-product"
               data-product-id={product.id}
-              class="absolute top-[4.25rem] right-3 z-20 w-8 h-8 rounded-full bg-slate-950/85 backdrop-blur-md text-slate-200 border border-white/15 flex items-center justify-center text-xs hover:text-emerald-400 active:scale-90 transition-all focus-visible:outline-none"
+              class="absolute top-7 right-3 z-20 w-8 h-8 rounded-full bg-slate-950/85 backdrop-blur-md text-slate-200 border border-white/15 flex items-center justify-center text-xs hover:text-emerald-400 active:scale-90 transition-all focus-visible:outline-none"
               aria-label={`Compartir enlace de ${product.name}`}
               title="Compartir enlace directo"
             >
@@ -528,7 +518,6 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
         <div>
           <p class="text-xs font-bold text-white leading-tight flex items-center gap-1.5">
             <span>Tu Carrito Drop</span>
-            <span id="floating-bag-shipping-tag" class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Ver detalle</span>
           </p>
           <p id="floating-bag-total" class="text-[11px] font-mono text-emerald-400">$0.00 USD en carrito</p>
         </div>
@@ -571,14 +560,6 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
             </span>
           </div>
           <div class="flex items-center gap-2">
-            <button
-              id="pdm-save-btn"
-              type="button"
-              class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center text-xs hover:bg-slate-700 transition-colors"
-              aria-label="Guardar prenda en selección"
-            >
-              <i id="pdm-save-icon" class="fa-regular fa-bookmark" aria-hidden="true"></i>
-            </button>
             <button
               id="pdm-share-btn"
               type="button"
@@ -888,19 +869,6 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
           </div>
         </div>
 
-        <div id="cart-free-shipping-box" class="mt-3 p-2.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
-          <div class="flex items-center justify-between text-[11px]">
-            <span id="cart-shipping-msg" class="text-slate-300 font-medium flex items-center gap-1.5">
-              <i class="fa-solid fa-truck-fast text-pink-400 text-xs" aria-hidden="true"></i>
-              <span>Envío Express GRATIS en pedidos desde $80.00</span>
-            </span>
-            <span id="cart-shipping-pct" class="font-mono text-[10px] text-emerald-400 font-bold">0%</span>
-          </div>
-          <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-            <div id="cart-shipping-progress" class="h-full bg-gradient-to-r from-pink-500 to-emerald-400 rounded-full transition-all duration-300" style="width: 0%"></div>
-          </div>
-        </div>
-
         <div id="saved-bag-items" class="flex-1 overflow-y-auto py-3 space-y-2.5 text-xs"></div>
 
         <div class="pt-3 border-t border-slate-800 space-y-2.5">
@@ -917,10 +885,6 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
             <div class="flex items-center justify-between text-slate-400 text-[11px]">
               <span>Subtotal prendas:</span>
               <span id="cart-subtotal-val" class="font-mono text-slate-200">$0.00</span>
-            </div>
-            <div class="flex items-center justify-between text-slate-400 text-[11px]">
-              <span>Envío estimado:</span>
-              <span id="cart-shipping-val" class="font-mono text-slate-300">$0.00</span>
             </div>
             <div class="flex items-center justify-between pt-1.5 border-t border-slate-800/80">
               <span class="font-bold text-slate-200">Total estimado:</span>
@@ -1341,8 +1305,6 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
       const productsList: ProductItem[] = rawData ? JSON.parse(rawData) : [];
 
       const CART_STORAGE_KEY = 'urban_drop_cart_v1';
-      const FREE_SHIPPING_THRESHOLD = 80;
-      const STANDARD_SHIPPING_COST = 6;
 
       interface CartItem {
         key: string;
@@ -1603,18 +1565,9 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
             </span>
             <button
               type="button"
-              data-action="toggle-save"
-              data-product-id="${product.id}"
-              class="save-product-btn absolute top-7 right-3 z-20 w-8 h-8 rounded-full bg-slate-950/85 backdrop-blur-md text-slate-200 border border-white/15 flex items-center justify-center text-xs hover:text-pink-400 active:scale-90 transition-all focus-visible:outline-none"
-              aria-label="Guardar ${product.name} en tu selección"
-            >
-              <i class="fa-regular fa-bookmark" aria-hidden="true" data-save-icon="${product.id}"></i>
-            </button>
-            <button
-              type="button"
               data-action="share-product"
               data-product-id="${product.id}"
-              class="absolute top-[4.25rem] right-3 z-20 w-8 h-8 rounded-full bg-slate-950/85 backdrop-blur-md text-slate-200 border border-white/15 flex items-center justify-center text-xs hover:text-emerald-400 active:scale-90 transition-all focus-visible:outline-none"
+              class="absolute top-7 right-3 z-20 w-8 h-8 rounded-full bg-slate-950/85 backdrop-blur-md text-slate-200 border border-white/15 flex items-center justify-center text-xs hover:text-emerald-400 active:scale-90 transition-all focus-visible:outline-none"
               aria-label="Compartir enlace de ${product.name}"
               title="Compartir enlace directo"
             >
@@ -1783,7 +1736,7 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
           // Mantiene configuración en memoria
         }
 
-        const selectQuery = [
+        const selectQueryBase = [
           'id',
           'nombre',
           'precio',
@@ -1798,17 +1751,26 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
           'producto_especificaciones(descripcion,orden)',
         ].join(',');
 
-        const url = `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(
-          selectQuery
-        )}&activo=eq.true&order=id.desc`;
+        const buildCatalogUrl = (cols: string) =>
+          `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(
+            cols
+          )}&activo=eq.true&order=id.desc`;
 
         try {
-          const res = await fetch(url, {
+          let res = await fetch(buildCatalogUrl(`slug,${selectQueryBase}`), {
             headers: {
               apikey: SUPABASE_PUBLISHABLE_KEY,
               Accept: 'application/json',
             },
           });
+          if (!res.ok && res.status === 400) {
+            res = await fetch(buildCatalogUrl(selectQueryBase), {
+              headers: {
+                apikey: SUPABASE_PUBLISHABLE_KEY,
+                Accept: 'application/json',
+              },
+            });
+          }
           if (!res.ok) return;
           const rows = await res.json();
           if (!Array.isArray(rows)) return;
@@ -1959,7 +1921,28 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
         }
       }
 
-      syncCatalogFromSupabase();
+      function openProductFromInitialUrl() {
+        const searchParams = new URLSearchParams(window.location.search);
+        const querySlug = searchParams.get('p') || searchParams.get('slug') || '';
+        const pathMatch = window.location.pathname.match(/^\/p\/([^/?#]+)/);
+        const targetSlug = decodeURIComponent(querySlug || (pathMatch ? pathMatch[1] : '')).trim();
+        if (!targetSlug) return;
+
+        let matched = Array.from(state.products.values()).find((p) => p.slug === targetSlug);
+        if (!matched) {
+          const idMatch = targetSlug.match(/-(\d+)$/);
+          if (idMatch) {
+            matched = state.products.get(Number(idMatch[1]));
+          }
+        }
+        if (matched) {
+          openDetailModal(matched.id);
+        }
+      }
+
+      syncCatalogFromSupabase().then(() => {
+        openProductFromInitialUrl();
+      });
 
       // 2. Elementos del DOM
       const detailModal = document.getElementById('product-detail-modal') as HTMLElement;
@@ -2082,9 +2065,6 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
         } else if (action === 'slide-next') {
           e.stopPropagation();
           changeProductSlide(productId, 1);
-        } else if (action === 'toggle-save') {
-          e.stopPropagation();
-          toggleSaveProduct(productId);
         } else if (action === 'share-product') {
           e.stopPropagation();
           shareProductById(productId);
@@ -2445,25 +2425,6 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
         showToast('Carrito vaciado');
       }
 
-      function toggleSaveProduct(productId: number) {
-        const product = state.products.get(productId);
-        if (!product) return;
-
-        if (state.savedProductIds.has(productId)) {
-          Array.from(state.cartItems.keys()).forEach((k) => {
-            if (k.startsWith(`${productId}:`)) {
-              state.cartItems.delete(k);
-            }
-          });
-          syncSavedProductIdsFromCart();
-          saveCartToStorage();
-          updateSavedBagUI();
-          showToast(`${product.name} quitada del carrito`);
-        } else {
-          addToCart(productId, product.selectedSize, 1);
-        }
-      }
-
       function getCartTotals() {
         let totalUnits = 0;
         let subtotal = 0;
@@ -2473,58 +2434,31 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
           totalUnits += item.qty;
           subtotal += prod.numericPrice * item.qty;
         });
-        const qualifiesFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD || subtotal === 0;
-        const shipping = subtotal === 0 ? 0 : qualifiesFreeShipping ? 0 : STANDARD_SHIPPING_COST;
-        const grandTotal = subtotal + shipping;
-        const missingForFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
-        const progressPct = subtotal <= 0 ? 0 : Math.min(100, Math.round((subtotal / FREE_SHIPPING_THRESHOLD) * 100));
 
         return {
           totalUnits,
           subtotal,
-          shipping,
-          grandTotal,
-          qualifiesFreeShipping,
-          missingForFreeShipping,
-          progressPct,
+          grandTotal: subtotal,
         };
       }
 
       function updateSavedBagUI() {
-        const { totalUnits, subtotal, shipping, grandTotal, qualifiesFreeShipping, missingForFreeShipping, progressPct } =
-          getCartTotals();
+        const { totalUnits, grandTotal } = getCartTotals();
 
         const headerBadge = document.getElementById('saved-bag-badge');
         const floatingBar = document.getElementById('floating-bag-bar');
         const floatingCount = document.getElementById('floating-bag-count');
         const floatingTotal = document.getElementById('floating-bag-total');
-        const floatingShippingTag = document.getElementById('floating-bag-shipping-tag');
         const countPill = document.getElementById('cart-items-count-pill');
         const clearBtn = document.getElementById('clear-cart-btn');
-        const shippingBox = document.getElementById('cart-free-shipping-box');
-        const shippingMsg = document.getElementById('cart-shipping-msg');
-        const shippingPct = document.getElementById('cart-shipping-pct');
-        const shippingBar = document.getElementById('cart-shipping-bar');
 
         state.products.forEach((_, pid) => {
-          const icon = document.querySelector<HTMLElement>(`[data-save-icon="${pid}"]`);
           const inCartQty = getProductTotalQtyInCart(pid);
-          if (icon) {
-            icon.className =
-              inCartQty > 0 ? 'fa-solid fa-bookmark text-pink-400' : 'fa-regular fa-bookmark';
-          }
           const cardCartBtnText = document.querySelector<HTMLElement>(`[data-btn-text-cart="${pid}"]`);
           if (cardCartBtnText) {
             cardCartBtnText.textContent = inCartQty > 0 ? `En Carrito (${inCartQty})` : 'Agregar';
           }
         });
-
-        const pdmSaveIcon = document.getElementById('pdm-save-icon');
-        if (pdmSaveIcon) {
-          pdmSaveIcon.className = state.savedProductIds.has(state.activeProductId)
-            ? 'fa-solid fa-bookmark text-pink-400'
-            : 'fa-regular fa-bookmark';
-        }
 
         const pdmAddCartText = document.getElementById('pdm-btn-add-cart-text');
         if (pdmAddCartText) {
@@ -2547,26 +2481,9 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
           clearBtn.classList.toggle('hidden', totalUnits === 0);
         }
 
-        if (shippingBox && shippingMsg && shippingPct && shippingBar) {
-          shippingPct.textContent = `${progressPct}%`;
-          shippingBar.style.width = `${progressPct}%`;
-          if (subtotal === 0) {
-            shippingMsg.textContent = `Agrega $${FREE_SHIPPING_THRESHOLD.toFixed(0)} USD para desbloquear Envío Express GRATIS`;
-          } else if (qualifiesFreeShipping) {
-            shippingMsg.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i>¡Envío Express GRATIS desbloqueado!`;
-          } else {
-            shippingMsg.textContent = `Te faltan $${missingForFreeShipping.toFixed(2)} USD para Envío Express GRATIS`;
-          }
-        }
-
         if (floatingBar && floatingCount && floatingTotal) {
           floatingCount.textContent = String(totalUnits);
           floatingTotal.textContent = `$${grandTotal.toFixed(2)} USD`;
-          if (floatingShippingTag) {
-            floatingShippingTag.textContent = qualifiesFreeShipping
-              ? '• Envío GRATIS'
-              : `• +$${shipping.toFixed(2)} envío`;
-          }
           if (totalUnits > 0) {
             floatingBar.classList.remove('translate-y-28', 'opacity-0', 'pointer-events-none');
           } else {
@@ -2580,25 +2497,12 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
       function renderSavedBagModalItems() {
         const container = document.getElementById('saved-bag-items');
         const subtotalEl = document.getElementById('cart-subtotal-val');
-        const shippingEl = document.getElementById('cart-shipping-val');
         const totalEl = document.getElementById('saved-bag-modal-total');
         if (!container || !totalEl) return;
 
-        const { totalUnits, subtotal, shipping, grandTotal, qualifiesFreeShipping } = getCartTotals();
+        const { totalUnits, grandTotal } = getCartTotals();
 
-        if (subtotalEl) subtotalEl.textContent = `$${subtotal.toFixed(2)} USD`;
-        if (shippingEl) {
-          if (subtotal === 0) {
-            shippingEl.textContent = '$0.00';
-            shippingEl.className = 'font-mono text-slate-400';
-          } else if (qualifiesFreeShipping) {
-            shippingEl.textContent = 'GRATIS';
-            shippingEl.className = 'font-mono font-bold text-emerald-400';
-          } else {
-            shippingEl.textContent = `$${shipping.toFixed(2)} USD`;
-            shippingEl.className = 'font-mono text-amber-300';
-          }
-        }
+        if (subtotalEl) subtotalEl.textContent = `$${grandTotal.toFixed(2)} USD`;
 
         if (state.cartItems.size === 0 || totalUnits === 0) {
           container.innerHTML = `
@@ -2923,9 +2827,6 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
 
       // 10. Eventos del Modal Detalle
       document.getElementById('pdm-close-btn')?.addEventListener('click', closeDetailModal);
-      document.getElementById('pdm-save-btn')?.addEventListener('click', () => {
-        toggleSaveProduct(state.activeProductId);
-      });
 
       document.getElementById('pdm-slide-prev')?.addEventListener('click', () => {
         changeProductSlide(state.activeProductId, -1);
@@ -3126,7 +3027,7 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
           return;
         }
 
-        const { totalUnits, subtotal, shipping, grandTotal, qualifiesFreeShipping } = getCartTotals();
+        const { totalUnits, grandTotal } = getCartTotals();
         const lines: string[] = [];
 
         state.cartItems.forEach((item) => {
@@ -3134,23 +3035,19 @@ const pageDescription = "Descubre lanzamientos exclusivos de ropa urbana y haz t
           if (!p) return;
           const lineTotal = p.numericPrice * item.qty;
           const exactCm = p.measurements?.[item.size] ? ` [${p.measurements[item.size]}]` : '';
-          lines.push(`• ${item.qty}x *${p.name}* — Talla *${item.size}*${exactCm} ($${lineTotal.toFixed(2)} USD)`);
+          const directUrl = getProductDirectUrl(p);
+          lines.push(`• ${item.qty}x *${p.name}* — Talla *${item.size}*${exactCm} ($${lineTotal.toFixed(2)} USD)\n  Enlace: ${directUrl}`);
         });
 
         const notesInput = document.getElementById('cart-order-notes') as HTMLInputElement | null;
         const notes = notesInput?.value ? notesInput.value.trim() : '';
-        const shippingLine = qualifiesFreeShipping
-          ? 'Envío Express: *GRATIS*'
-          : `Envío Express: *$${shipping.toFixed(2)} USD*`;
         const notesLine = notes ? `\nNota de entrega: _${notes}_` : '';
 
         const multiMsg = `¡Hola URBAN_DROP! 🔥 Quiero confirmar mi carrito del Drop #04 (${totalUnits} ${
           totalUnits === 1 ? 'prenda' : 'prendas'
-        }):\n${lines.join('\n')}\nSubtotal: $${subtotal.toFixed(
+        }):\n${lines.join('\n')}\nTotal a pagar: *$${grandTotal.toFixed(
           2
-        )} USD\n${shippingLine}\nTotal a pagar: *$${grandTotal.toFixed(
-          2
-        )} USD*${notesLine}\n¿Me confirman datos de pago y envío inmediato?`;
+        )} USD*${notesLine}\n¿Me confirman datos de pago y disponibilidad?`;
 
         state.isMultiOrderSocial = true;
         state.activeSocialChannel = channel;
