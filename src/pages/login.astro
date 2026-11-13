@@ -1294,7 +1294,6 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
       import {
         SUPABASE_URL,
         SUPABASE_PUBLISHABLE_KEY,
-        generateDynamicProductSlug,
       } from '../lib/supabase';
       import { inspectAndValidateJwt, maskEmailForAudit } from '../lib/auth';
       import {
@@ -2870,8 +2869,7 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
               throw new Error('Error al actualizar detalles del producto');
             }
           } else {
-            // INSERT nuevo producto con slug dinámico aleatorio
-            const generatedSlug = generateDynamicProductSlug(marca);
+            // INSERT nuevo producto
             const prodRes = await fetch(`${SUPABASE_URL}/rest/v1/productos`, {
               method: 'POST',
               headers: {
@@ -2882,7 +2880,6 @@ const pageDescription = "Portal administrativo con autenticación JWT bajo OWASP
               },
               body: JSON.stringify({
                 categoria_id: categoriaId,
-                slug: generatedSlug,
                 nombre: marca,
                 precio: priceVal,
                 etiqueta: 'Catálogo',
