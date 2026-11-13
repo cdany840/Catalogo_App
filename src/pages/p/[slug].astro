@@ -38,7 +38,7 @@ Astro.response.headers.set('X-Frame-Options', 'DENY');
 Astro.response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
 const isSoldOut = product.active === false || product.stockLeft <= 0;
-const siteOrigin = Astro.site?.toString() || Astro.url.origin;
+const siteOrigin = Astro.url.origin || Astro.site?.toString() || 'https://urbandrop.store';
 const canonicalUrl = new URL(`/p/${product.slug}`, siteOrigin).toString();
 const ogImage = product.images[0];
 const ogDescription = isSoldOut

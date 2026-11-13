@@ -63,14 +63,14 @@ export interface EnrichedProduct extends Product {
   active: boolean;
 }
 
-const SLUG_REGEX = /^[a-z0-9][a-z0-9-]{1,120}$/;
+const SLUG_REGEX = /^[a-z0-9][a-z0-9_-]{0,120}$/;
 
 /**
  * Valida estrictamente el formato de un slug de producto para prevenir
  * path traversal, inyección en PostgREST o consultas malformadas.
  */
 export function isValidProductSlug(slug: unknown): slug is string {
-  return typeof slug === 'string' && SLUG_REGEX.test(slug);
+  return typeof slug === 'string' && SLUG_REGEX.test(slug.trim().toLowerCase());
 }
 
 /**
@@ -359,7 +359,8 @@ export async function fetchProductBySlugFromSupabase(slug: string): Promise<{
     };
   }
 
-  const trailingIdMatch = slug.match(/-(\d+)$/);
+  const normalizedSlug = slug.trim().toLowerCase();
+  const trailingIdMatch = normalizedSlug.match(/(?:^|-)(\d+)$/);
   const fallbackId = trailingIdMatch ? Number(trailingIdMatch[1]) : null;
 
   const bySlugEndpoint = `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(
