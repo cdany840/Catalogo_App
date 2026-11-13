@@ -27,12 +27,14 @@ export const DEFAULT_STORE_CONFIG: StoreConfig = {
 
 export interface SupabaseRelationalProductRow {
   id: number;
+  slug?: string;
   nombre: string;
   precio: number | string;
   etiqueta: string;
   corte_fit: string;
   info_modelo: string;
   stock_disponible: number;
+  activo?: boolean;
   orden: number;
   categorias: {
     slug: ProductCategory;
@@ -58,6 +60,101 @@ export interface SupabaseRelationalProductRow {
 
 export interface EnrichedProduct extends Product {
   availableSizes?: Record<SizeKey, boolean>;
+  active: boolean;
+}
+
+const SLUG_REGEX = /^[a-z0-9][a-z0-9-]{1,120}$/;
+
+/**
+ * Valida estrictamente el formato de un slug de producto para prevenir
+ * path traversal, inyección en PostgREST o consultas malformadas.
+ */
+export function isValidProductSlug(slug: unknown): slug is string {
+  return typeof slug === 'string' && SLUG_REGEX.test(slug);
+}
+
+/**
+ * Genera un slug URL-safe dinámico con sufijo aleatorio criptográfico (CSPRNG).
+ * Evita colisiones incluso cuando múltiples productos comparten el mismo nombre.
+ */
+export function generateDynamicProductSlug(name: string): string {
+  const base = (name || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48)
+    .replace(/-+$/g, '') || 'drop';
+
+  const bytes = new Uint8Array(4);
+  if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i++) {
+      bytes[i] = Math.floor(Math.random() * 256);
+    }
+  }
+  const suffix = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return `${base}-${suffix}`;
+}
+
+/**
+ * Construye una URL absoluta HTTPS optimizada (< 300 KB, JPEG/WebP estándar)
+ * para vistas previas Open Graph en WhatsApp, Instagram y X.
+ */
+export function buildOgImageUrl(rawUrl: string | undefined, siteBaseUrl: string): string {
+  const defaultFallback = 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&fm=jpg&q=75&w=1080&h=1080';
+  if (!rawUrl || rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) {
+    return defaultFallback;
+  }
+
+  try {
+    const resolved = rawUrl.startsWith('http://') || rawUrl.startsWith('https://')
+      ? new URL(rawUrl)
+      : new URL(rawUrl, siteBaseUrl);
+
+    // Forzar HTTPS para compatibilidad estricta con crawlers de WhatsApp/Instagram
+    if (resolved.protocol === 'http:') {
+      resolved.protocol = 'https:';
+    }
+
+    if (resolved.hostname.includes('images.unsplash.com')) {
+      resolved.searchParams.set('auto', 'format');
+      resolved.searchParams.set('fit', 'crop');
+      resolved.searchParams.set('fm', 'jpg');
+      resolved.searchParams.set('q', '75');
+      resolved.searchParams.set('w', '1080');
+      resolved.searchParams.set('h', '1080');
+    }
+
+    return resolved.toString();
+  } catch {
+    return defaultFallback;
+  }
+}
+
+/**
+ * Genera el enlace estructurado de WhatsApp incluyendo nombre, talla y URL directa.
+ */
+export function buildWhatsAppLink(
+  phone: string,
+  productName: string,
+  selectedSize: string,
+  productUrl: string,
+  price?: string,
+  measurements?: string
+): string {
+  const cleanPhone = (phone || DEFAULT_STORE_CONFIG.whatsappNumber).replace(/\D/g, '');
+  const priceText = price ? ` (${price})` : '';
+  const measText = measurements ? ` [${measurements}]` : '';
+  const message =
+    `Hola URBAN_DROP, me interesa esta prenda:\n` +
+    `• Producto: ${productName}${priceText}\n` +
+    `• Talla: ${selectedSize}${measText}\n` +
+    `• Enlace: ${productUrl}`;
+
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
 
 /**
@@ -105,8 +202,16 @@ export function mapSupabaseRowToProduct(row: SupabaseRelationalProductRow): Enri
     .sort((a, b) => a.orden - b.orden)
     .map((s) => s.descripcion);
 
+  const baseSlug = (row.nombre || 'drop')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'drop';
+
   return {
     id: row.id,
+    slug: row.slug && isValidProductSlug(row.slug) ? row.slug : `${baseSlug}-${row.id}`,
     name: row.nombre,
     price: `$${numPrice.toFixed(2)}`,
     numericPrice: numPrice,
@@ -115,6 +220,7 @@ export function mapSupabaseRowToProduct(row: SupabaseRelationalProductRow): Enri
     fit: row.corte_fit,
     modelInfo: row.info_modelo,
     stockLeft: row.stock_disponible,
+    active: row.activo !== false,
     images:
       sortedImages.length > 0
         ? sortedImages
@@ -153,6 +259,23 @@ export async function fetchStoreConfigFromSupabase(): Promise<StoreConfig> {
   }
 }
 
+const PRODUCT_RELATIONAL_SELECT = [
+  'id',
+  'slug',
+  'nombre',
+  'precio',
+  'etiqueta',
+  'corte_fit',
+  'info_modelo',
+  'stock_disponible',
+  'activo',
+  'orden',
+  'categorias!inner(slug,nombre,icono)',
+  'producto_imagenes(url,alt_text,orden)',
+  'producto_tallas(talla,medidas_cm,stock_talla,orden)',
+  'producto_especificaciones(descripcion,orden)',
+].join(',');
+
 /**
  * Obtiene el catálogo completo desde Supabase PostgreSQL en una sola consulta JOIN.
  */
@@ -161,23 +284,8 @@ export async function fetchCatalogFromSupabase(): Promise<{
   storeConfig: StoreConfig;
   source: 'supabase' | 'fallback';
 }> {
-  const selectQuery = [
-    'id',
-    'nombre',
-    'precio',
-    'etiqueta',
-    'corte_fit',
-    'info_modelo',
-    'stock_disponible',
-    'orden',
-    'categorias!inner(slug,nombre,icono)',
-    'producto_imagenes(url,alt_text,orden)',
-    'producto_tallas(talla,medidas_cm,stock_talla,orden)',
-    'producto_especificaciones(descripcion,orden)',
-  ].join(',');
-
   const endpoint = `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(
-    selectQuery
+    PRODUCT_RELATIONAL_SELECT
   )}&activo=eq.true&order=orden.asc,id.desc`;
 
   try {
@@ -197,7 +305,11 @@ export async function fetchCatalogFromSupabase(): Promise<{
 
     const rows: SupabaseRelationalProductRow[] = await prodRes.json();
     if (!Array.isArray(rows) || rows.length === 0) {
-      return { products: fallbackProducts, storeConfig, source: 'fallback' };
+      return {
+        products: fallbackProducts.map((p) => ({ ...p, active: true })),
+        storeConfig,
+        source: 'fallback',
+      };
     }
 
     return {
@@ -207,7 +319,110 @@ export async function fetchCatalogFromSupabase(): Promise<{
     };
   } catch {
     return {
-      products: fallbackProducts,
+      products: fallbackProducts.map((p) => ({ ...p, active: true })),
+      storeConfig: DEFAULT_STORE_CONFIG,
+      source: 'fallback',
+    };
+  }
+}
+
+/**
+ * Obtiene un producto individual por su `slug` desde Supabase PostgreSQL
+ * junto con la configuración de tienda y productos relacionados.
+ */
+export async function fetchProductBySlugFromSupabase(slug: string): Promise<{
+  product: EnrichedProduct | null;
+  relatedProducts: EnrichedProduct[];
+  storeConfig: StoreConfig;
+  source: 'supabase' | 'fallback';
+}> {
+  if (!isValidProductSlug(slug)) {
+    return {
+      product: null,
+      relatedProducts: [],
+      storeConfig: DEFAULT_STORE_CONFIG,
+      source: 'supabase',
+    };
+  }
+
+  const endpoint = `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(
+    PRODUCT_RELATIONAL_SELECT
+  )}&slug=eq.${encodeURIComponent(slug)}&limit=1`;
+
+  const relatedEndpoint = `${SUPABASE_URL}/rest/v1/productos?select=${encodeURIComponent(
+    PRODUCT_RELATIONAL_SELECT
+  )}&activo=eq.true&slug=neq.${encodeURIComponent(slug)}&order=orden.asc,id.desc&limit=4`;
+
+  try {
+    const [prodRes, relatedRes, storeConfig] = await Promise.all([
+      fetch(endpoint, {
+        headers: {
+          apikey: SUPABASE_PUBLISHABLE_KEY,
+          Accept: 'application/json',
+        },
+      }),
+      fetch(relatedEndpoint, {
+        headers: {
+          apikey: SUPABASE_PUBLISHABLE_KEY,
+          Accept: 'application/json',
+        },
+      }),
+      fetchStoreConfigFromSupabase(),
+    ]);
+
+    if (!prodRes.ok) {
+      throw new Error(`Supabase HTTP ${prodRes.status}`);
+    }
+
+    const rows: SupabaseRelationalProductRow[] = await prodRes.json();
+    if (!Array.isArray(rows) || rows.length === 0) {
+      const fb = fallbackProducts.find((p) => p.slug === slug);
+      if (fb) {
+        const fbRelated = fallbackProducts
+          .filter((p) => p.slug !== slug)
+          .slice(0, 4)
+          .map((p) => ({ ...p, active: true }));
+        return {
+          product: { ...fb, active: fb.active !== false },
+          relatedProducts: fbRelated,
+          storeConfig,
+          source: 'fallback',
+        };
+      }
+      return { product: null, relatedProducts: [], storeConfig, source: 'supabase' };
+    }
+
+    const product = mapSupabaseRowToProduct(rows[0]);
+    let relatedProducts: EnrichedProduct[] = [];
+    if (relatedRes.ok) {
+      const relRows: SupabaseRelationalProductRow[] = await relatedRes.json();
+      if (Array.isArray(relRows)) {
+        relatedProducts = relRows.map(mapSupabaseRowToProduct);
+      }
+    }
+
+    return {
+      product,
+      relatedProducts,
+      storeConfig,
+      source: 'supabase',
+    };
+  } catch {
+    const fb = fallbackProducts.find((p) => p.slug === slug);
+    if (fb) {
+      return {
+        product: { ...fb, active: fb.active !== false },
+        relatedProducts: fallbackProducts
+          .filter((p) => p.slug !== slug)
+          .slice(0, 4)
+          .map((p) => ({ ...p, active: true })),
+        storeConfig: DEFAULT_STORE_CONFIG,
+        source: 'fallback',
+      };
+    }
+    return {
+      product: null,
+      relatedProducts: [],
       storeConfig: DEFAULT_STORE_CONFIG,
       source: 'fallback',
     };

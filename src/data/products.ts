@@ -14,6 +14,7 @@ export interface ProductMeasurements {
 
 export interface Product {
   id: number;
+  slug: string;
   name: string;
   price: string;
   numericPrice: number;
@@ -22,6 +23,7 @@ export interface Product {
   fit: string;
   modelInfo: string;
   stockLeft: number;
+  active?: boolean;
   images: string[];
   measurements: ProductMeasurements;
   specs: string[];
@@ -49,6 +51,7 @@ export const INSTAGRAM_HANDLE = 'urbandrop.official';
 export const products: Product[] = [
   {
     id: 1,
+    slug: "oversized-street-hoodie-7f3a91c2",
     name: "Oversized Street Hoodie",
     price: "$42.00",
     numericPrice: 42,
@@ -76,6 +79,7 @@ export const products: Product[] = [
   },
   {
     id: 2,
+    slug: "jeans-cargo-wide-leg-4b8e20d5",
     name: "Jeans Cargo Wide Leg",
     price: "$55.00",
     numericPrice: 55,
@@ -103,6 +107,7 @@ export const products: Product[] = [
   },
   {
     id: 3,
+    slug: "graphic-boxy-tee-cyber-9c1d44e7",
     name: "Graphic Boxy Tee Cyber",
     price: "$28.00",
     numericPrice: 28,
@@ -130,6 +135,7 @@ export const products: Product[] = [
   },
   {
     id: 4,
+    slug: "bomber-techwear-parachute-2e6f83a1",
     name: "Bomber Techwear Parachute",
     price: "$68.00",
     numericPrice: 68,
@@ -157,6 +163,7 @@ export const products: Product[] = [
   },
   {
     id: 5,
+    slug: "zip-up-hoodie-acid-wash-5a7c19b4",
     name: "Zip-Up Hoodie Acid Wash",
     price: "$48.00",
     numericPrice: 48,
@@ -184,6 +191,7 @@ export const products: Product[] = [
   },
   {
     id: 6,
+    slug: "parachute-nylon-track-pants-8d3e52f0",
     name: "Parachute Nylon Track Pants",
     price: "$52.00",
     numericPrice: 52,
@@ -211,6 +219,7 @@ export const products: Product[] = [
   },
   {
     id: 7,
+    slug: "washed-vintage-heavy-tee-1f9b64c8",
     name: "Washed Vintage Heavy Tee",
     price: "$32.00",
     numericPrice: 32,
@@ -238,6 +247,7 @@ export const products: Product[] = [
   },
   {
     id: 8,
+    slug: "chaqueta-denim-distressed-6c4a08e3",
     name: "Chaqueta Denim Distressed",
     price: "$64.00",
     numericPrice: 64,

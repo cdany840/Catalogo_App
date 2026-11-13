@@ -25,6 +25,7 @@ create table if not exists public.categorias (
 create table if not exists public.productos (
   id bigint generated always as identity primary key,
   categoria_id bigint not null references public.categorias(id) on delete restrict,
+  slug text not null unique,
   nombre text not null,
   precio numeric(10,2) not null check (precio >= 0),
   etiqueta text not null,
@@ -96,11 +97,12 @@ create policy "Lectura publica de categorias activas"
   using (activo = true);
 
 drop policy if exists "Lectura publica de productos activos" on public.productos;
-create policy "Lectura publica de productos activos"
+drop policy if exists "Lectura publica de productos" on public.productos;
+create policy "Lectura publica de productos"
   on public.productos
   for select
   to anon, authenticated
-  using (activo = true);
+  using (true);
 
 drop policy if exists "Lectura publica de imagenes de productos" on public.producto_imagenes;
 create policy "Lectura publica de imagenes de productos"

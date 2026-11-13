@@ -159,6 +159,7 @@ export type Database = {
           nombre: string;
           orden: number;
           precio: number;
+          slug: string;
           stock_disponible: number;
         };
         Insert: {
@@ -172,6 +173,7 @@ export type Database = {
           nombre: string;
           orden?: number;
           precio: number;
+          slug?: string;
           stock_disponible?: number;
         };
         Update: {
@@ -185,6 +187,7 @@ export type Database = {
           nombre?: string;
           orden?: number;
           precio?: number;
+          slug?: string;
           stock_disponible?: number;
         };
         Relationships: [
