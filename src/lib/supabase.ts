@@ -261,7 +261,6 @@ export async function fetchStoreConfigFromSupabase(): Promise<StoreConfig> {
 
 const PRODUCT_RELATIONAL_SELECT = [
   'id',
-  'slug',
   'nombre',
   'precio',
   'etiqueta',
@@ -304,7 +303,7 @@ export async function fetchCatalogFromSupabase(): Promise<{
     }
 
     const rows: SupabaseRelationalProductRow[] = await prodRes.json();
-    if (!Array.isArray(rows) || rows.length === 0) {
+    if (!Array.isArray(rows)) {
       return {
         products: fallbackProducts.map((p) => ({ ...p, active: true })),
         storeConfig,

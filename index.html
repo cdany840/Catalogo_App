@@ -3329,9 +3329,22 @@
           });
           if (!res.ok) return;
           const rows = await res.json();
-          if (!Array.isArray(rows) || rows.length === 0) return;
+          if (!Array.isArray(rows)) return;
 
           const catalogContainer = document.getElementById('catalog-container');
+          const liveIds = new Set(rows.map((r) => Number(r.id)));
+
+          Array.from(state.products.keys()).forEach((existingId) => {
+            if (!liveIds.has(existingId)) {
+              state.products.delete(existingId);
+            }
+          });
+          document.querySelectorAll('.product-card').forEach((card) => {
+            const cid = Number(card.getAttribute('data-product-id'));
+            if (!liveIds.has(cid)) {
+              card.remove();
+            }
+          });
 
           rows.forEach((row) => {
             const numPrice = typeof row.precio === 'number' ? row.precio : parseFloat(String(row.precio));
